@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wav3mind.local/schemas/hardware-protocol.json",
+  "title": "Hardware_Protocol",
+  "description": "Strict JSON payload configuring Hydrawav3 session modalities, intensity, sequence, duration, and pad placements. Field names and enum values are wellness-safe for API and UI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sessionDurationMinutes",
+    "sequence",
+    "sunPad",
+    "moonPad"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "sessionDurationMinutes": {
+      "type": "number",
+      "minimum": 6,
+      "maximum": 12,
+      "description": "Target session length; hackathon default centers on ~9 minutes."
+    },
+    "sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "modality", "intensity", "durationMinutes"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "modality": {
+            "type": "string",
+            "enum": ["thermal", "photobiomodulation", "vibro_acoustic", "combined"]
+          },
+          "intensity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Relative intensity 0–100 for the stack for this step."
+          },
+          "durationMinutes": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 12
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional wellness-safe cue for practitioner; no prohibited vocabulary."
+          }
+        }
+      }
+    },
+    "sunPad": {
+      "$ref": "#/$defs/padConfig"
+    },
+    "moonPad": {
+      "$ref": "#/$defs/padConfig"
+    },
+    "photobiomodulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "redNm": { "type": "integer", "const": 660 },
+        "blueNm": { "type": "integer", "const": 450 }
+      }
+    }
+  },
+  "$defs": {
+    "padConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["placement", "thermalMode"],
+      "properties": {
+        "placement": {
+          "type": "string",
+          "enum": [
+            "upper_back",
+            "mid_back",
+            "lower_back",
+            "left_shoulder",
+            "right_shoulder",
+            "left_hip",
+            "right_hip",
+            "hamstrings_left",
+            "hamstrings_right",
+            "calves_left",
+            "calves_right",
+            "custom_note"
+          ]
+        },
+        "placementDetail": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Used when placement is custom_note; wellness framing only."
+        },
+        "thermalMode": {
+          "type": "string",
+          "enum": ["heat", "cool", "neutral"]
+        },
+        "vibroAcousticIntensity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "lightIntensity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  }
+}
