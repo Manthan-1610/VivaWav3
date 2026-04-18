@@ -1,23 +1,33 @@
+import { CssBaseline, Box, Container, Typography } from "@mui/material";
 import { AssessmentView } from "./components/assessment/AssessmentView";
-import { RecoveryDashboard } from "./components/recovery/RecoveryDashboard";
-import { PractitionerDashboard } from "./components/practitioner/PractitionerDashboard";
 
 export function App() {
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: "1.5rem" }}>
-      <h1 style={{ marginTop: 0 }}>ViVaWav3</h1>
-      <p style={{ color: "#475569" }}>
-        Frontend scaffold — feature flows are not implemented yet.
-      </p>
-      <section style={{ marginTop: "2rem" }}>
-        <AssessmentView />
-      </section>
-      <section style={{ marginTop: "2rem" }}>
-        <RecoveryDashboard />
-      </section>
-      <section style={{ marginTop: "2rem" }}>
-        <PractitionerDashboard />
-      </section>
-    </main>
+    <>
+      <CssBaseline />
+      <Box
+        sx={{
+          minHeight: "100vh",
+          py: 3,
+          background:
+            "radial-gradient(circle at top left, rgba(168, 187, 163, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(184, 124, 76, 0.16), transparent 30%), #0b1220",
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography
+            sx={{
+              mb: 2,
+              color: "#f8fafc",
+              fontSize: { xs: "2rem", md: "3rem" },
+              fontWeight: 900,
+            }}
+          >
+            ViVaWav3 Assessment
+          </Typography>
+
+          <AssessmentView />
+        </Container>
+      </Box>
+    </>
   );
 }
