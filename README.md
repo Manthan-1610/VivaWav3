@@ -48,4 +48,7 @@ Build:
 npm run build
 ```
 
-Copy `server/.env.example` to `server/.env` if you need to override `PORT`.
+Environment templates (copy to `.env` / `.env.local` and fill in; never commit secrets):
+
+- [server/.env.example](server/.env.example) — `PORT`, Gemini, ElevenLabs, Firebase Admin, Hydrawav3 API, fallbacks
+- [frontend/.env.example](frontend/.env.example) — `VITE_*` Firebase client config and API base URL
