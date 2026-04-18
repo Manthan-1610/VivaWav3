@@ -20,3 +20,32 @@ React · Express.js · Firebase (Firestore or Realtime Database) · Gemini · El
 ## Philosophy
 
 The body supports its own recovery; the practitioner guides; the platform empowers.
+
+## Project layout
+
+| Path | Role |
+|------|------|
+| [frontend/](frontend/) | React (Vite + TypeScript) — UI shells only |
+| [server/](server/) | Express (TypeScript) — API route stubs (`501` until implemented) |
+
+## Run locally
+
+From the repo root (required so the `server` workspace and `dotenv` install correctly):
+
+```bash
+npm install
+npm run dev
+```
+
+Do not skip `npm install` at the root; installing only inside `frontend/` leaves the `server` workspace unlinked and APIs will fail to resolve dependencies such as `dotenv`.
+
+- Web UI: [http://localhost:5173](http://localhost:5173) (proxies `/api` to the API)
+- API: [http://localhost:3001](http://localhost:3001) — health check: `GET /health`
+
+Build:
+
+```bash
+npm run build
+```
+
+Copy `server/.env.example` to `server/.env` if you need to override `PORT`.

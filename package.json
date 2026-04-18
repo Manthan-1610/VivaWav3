@@ -1,0 +1,16 @@
+{
+  "name": "vivawav3",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n fe,api -c cyan,magenta \"npm run dev -w frontend\" \"npm run dev -w server\"",
+    "build": "npm run build -w frontend && npm run build -w server",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
