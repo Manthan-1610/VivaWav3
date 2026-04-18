@@ -1,4 +1,4 @@
-# Express API specification — Wav3Mind
+# Express API specification — ViVaWav3
 
 Base URL: `https://<host>/api` (no trailing slash on routes below).
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://wav3mind.local/schemas/hardware-protocol.json",
+  "$id": "https://vivawav3.local/schemas/hardware-protocol.json",
   "title": "Hardware_Protocol",
   "description": "Strict JSON payload configuring Hydrawav3 session modalities, intensity, sequence, duration, and pad placements. Field names and enum values are wellness-safe for API and UI.",
   "type": "object",

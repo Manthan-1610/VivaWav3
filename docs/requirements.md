@@ -2,13 +2,11 @@
 
 ## Introduction
 
-**Wav3Mind** is an autonomous wellness agent for the Hydrawav3 platform, designed to close three recovery intelligence gaps: pre-session assessment, in-session personalization, and post-session outcome continuity. The system spans a React frontend, an Express.js backend, Firebase state sync, Gemini API reasoning, ElevenLabs voice coaching, and MediaPipe client-side pose estimation. This is a 24-hour hackathon sprint (GlobeHack Season 1, Recovery Intelligence track) targeting high-volume practitioners serving 60–80 clients per day with under two minutes of touch time per client.
-
-*Repository note:* this codebase may remain under the folder name `VivaWav3`; **Wav3Mind** is the product name for documentation and demos.
+**ViVaWav3** is an autonomous wellness agent for the Hydrawav3 platform, designed to close three recovery intelligence gaps: pre-session assessment, in-session personalization, and post-session outcome continuity. The system spans a React frontend, an Express.js backend, Firebase state sync, Gemini API reasoning, ElevenLabs voice coaching, and MediaPipe client-side pose estimation. This is a 24-hour hackathon sprint (GlobeHack Season 1, Recovery Intelligence track) targeting high-volume practitioners serving 60–80 clients per day with under two minutes of touch time per client.
 
 **Regulatory Note:** Hydrawav3 is a wellness platform. All language, UI copy, data models, and code comments must use approved wellness terminology exclusively. Prohibited terms include: medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient, replaces the practitioner (and equivalent claims). Approved terms include: recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management. Use **client** or **user** in identifiers, comments, and user-facing copy for consistency and judging safety.
 
-**Know → Act → Learn:** Wav3Mind maps to the Hydrawav3 flywheel as **Know** (camera-based movement assessment and asymmetry signals), **Act** (personalized hardware protocol plus voice-guided breathing from the Express backend), **Learn** (Firebase-backed recovery scores, streaks, XP/levels, and practitioner-side trends that compound over time).
+**Know → Act → Learn:** ViVaWav3 maps to the Hydrawav3 flywheel as **Know** (camera-based movement assessment and asymmetry signals), **Act** (personalized hardware protocol plus voice-guided breathing from the Express backend), **Learn** (Firebase-backed recovery scores, streaks, XP/levels, and practitioner-side trends that compound over time).
 
 ## Organizer-provided resources (GlobeHack build phase)
 
@@ -23,7 +21,7 @@ These are encouraged enhancements if time permits: AR overlay with red and blue 
 
 ## Glossary
 
-- **Wav3Mind**: The autonomous wellness agent system encompassing assessment, personalization, and outcome continuity phases.
+- **ViVaWav3**: The autonomous wellness agent system encompassing assessment, personalization, and outcome continuity phases.
 - **Hydrawav3**: The hands-off wellness technology platform built on Polar Water Resonance (PWR) that delivers thermal modulation, photobiomodulation, and resonance-based mechanical stimulation.
 - **Assessment_View**: The React frontend component that captures body movement video and runs MediaPipe pose estimation to detect kinematic asymmetry.
 - **Pose_Estimator**: The client-side MediaPipe module that processes video frames to extract body landmark coordinates and compute asymmetry scores.
@@ -206,7 +204,7 @@ These are encouraged enhancements if time permits: AR overlay with red and blue 
 
 #### Acceptance Criteria
 
-1. THE Wav3Mind system SHALL use only approved wellness terms (recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management) in all user-facing text, API response messages, and data model field names.
-2. THE Wav3Mind system SHALL not include any prohibited medical terms (medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient) or positioning that **replaces the practitioner** in UI copy, API responses, code comments, or data model field names.
+1. THE ViVaWav3 system SHALL use only approved wellness terms (recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management) in all user-facing text, API response messages, and data model field names.
+2. THE ViVaWav3 system SHALL not include any prohibited medical terms (medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient) or positioning that **replaces the practitioner** in UI copy, API responses, code comments, or data model field names.
 3. WHEN generating voice coaching scripts, THE Voice_Coach SHALL use only approved wellness terminology.
 4. THE Gemini system prompt SHALL explicitly list prohibited terms and instruct the Gemini_API to exclude them from all generated output.

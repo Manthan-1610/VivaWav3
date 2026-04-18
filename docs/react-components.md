@@ -1,4 +1,4 @@
-# React component hierarchy — Wav3Mind
+# React component hierarchy — ViVaWav3
 
 Conventions: functional components, one **error boundary** per top-level route (Requirement 13). Copy uses **client** / **user**, never prohibited wellness terms.
 

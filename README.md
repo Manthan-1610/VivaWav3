@@ -1,8 +1,6 @@
-# Wav3Mind
+# ViVaWav3
 
-**Wav3Mind** is the autonomous wellness agent for the Hydrawav3 platform (GlobeHack Season 1 — Recovery Intelligence track). It covers **assessment** (MediaPipe movement insights), **in-session personalization** (Express + Gemini + ElevenLabs), and **outcome continuity** (Firebase-backed recovery scores, streaks, XP/level, practitioner trends).
-
-This repository folder is named `VivaWav3`; product documentation refers to **Wav3Mind**.
+**ViVaWav3** is the autonomous wellness agent for the Hydrawav3 platform (GlobeHack Season 1 — Recovery Intelligence track). It covers **assessment** (MediaPipe movement insights), **in-session personalization** (Express + Gemini + ElevenLabs), and **outcome continuity** (Firebase-backed recovery scores, streaks, XP/level, practitioner trends).
 
 ## Documentation
 

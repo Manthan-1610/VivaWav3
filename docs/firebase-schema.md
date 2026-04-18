@@ -1,4 +1,4 @@
-# Firebase schema — Wav3Mind
+# Firebase schema — ViVaWav3
 
 **Choice for this sprint:** Use **Cloud Firestore** as the primary database. It supports indexed queries (for example “clients for practitioner `X`”) and scales better for per-client trend charts than a large nested JSON tree in Realtime Database. **Firebase Realtime Database** remains valid for simple demos; an equivalent tree is shown at the end for reference.
 
