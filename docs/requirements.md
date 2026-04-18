@@ -2,13 +2,13 @@
 
 ## Introduction
 
-Wav3Mind is an autonomous wellness agent for the Hydrawav3 platform, designed to close three recovery intelligence gaps: pre-session assessment, in-session personalization, and post-session outcome continuity. The system spans a React frontend, an Express.js backend, Firebase state sync, Gemini API reasoning, ElevenLabs voice coaching, and MediaPipe client-side pose estimation. This is a 24-hour hackathon sprint (GlobeHack Season 1) targeting high-volume practitioners serving 60-80 clients per day with under two minutes of touch time per client.
+ViVaWav3 is an autonomous wellness agent for the Hydrawav3 platform, designed to close three recovery intelligence gaps: pre-session assessment, in-session personalization, and post-session outcome continuity. The system spans a React frontend, an Express.js backend, Firebase state sync, Gemini API reasoning, ElevenLabs voice coaching, and MediaPipe client-side pose estimation. This is a 24-hour hackathon sprint (GlobeHack Season 1) targeting high-volume practitioners serving 60-80 clients per day with under two minutes of touch time per client.
 
 **Regulatory Note:** Hydrawav3 is a wellness platform. All language, UI copy, data models, and code comments must use approved wellness terminology exclusively. Prohibited terms include: medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient. Approved terms include: recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management.
 
 ## Glossary
 
-- **Wav3Mind**: The autonomous wellness agent system encompassing assessment, personalization, and outcome continuity phases.
+- **ViVaWav3**: The autonomous wellness agent system encompassing assessment, personalization, and outcome continuity phases.
 - **Hydrawav3**: The hands-off wellness technology platform built on Polar Water Resonance (PWR) that delivers thermal modulation, photobiomodulation, and resonance-based mechanical stimulation.
 - **Assessment_View**: The React frontend component that captures body movement video and runs MediaPipe pose estimation to detect kinematic asymmetry.
 - **Pose_Estimator**: The client-side MediaPipe module that processes video frames to extract body landmark coordinates and compute asymmetry scores.
@@ -185,7 +185,7 @@ Wav3Mind is an autonomous wellness agent for the Hydrawav3 platform, designed to
 
 #### Acceptance Criteria
 
-1. THE Wav3Mind system SHALL use only approved wellness terms (recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management) in all user-facing text, API response messages, and data model field names.
-2. THE Wav3Mind system SHALL not include any prohibited medical terms (medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient) in UI copy, API responses, code comments, or data model field names.
+1. THE ViVaWav3 system SHALL use only approved wellness terms (recovery, wellness, mobility, performance, supports, empowers, enhances, supports inflammation management) in all user-facing text, API response messages, and data model field names.
+2. THE ViVaWav3 system SHALL not include any prohibited medical terms (medical device, clinical, diagnostic, treats, cures, diagnoses, heals, reduces inflammation, patient) in UI copy, API responses, code comments, or data model field names.
 3. WHEN generating voice coaching scripts, THE Voice_Coach SHALL use only approved wellness terminology.
 4. THE Gemini system prompt SHALL explicitly list prohibited terms and instruct the Gemini_API to exclude them from all generated output.
