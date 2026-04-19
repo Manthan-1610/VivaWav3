@@ -3,8 +3,9 @@ import { Router, type Request, type Response } from "express";
 import { validateGenerateBody } from "../services/validateGenerateBody.js";
 import { generateHardwareProtocolWithGemini } from "../services/geminiProtocol.js";
 import { synthesizeVoiceCoaching } from "../services/elevenLabsVoice.js";
-import { persistAssessmentSession } from "../services/firebaseSession.js";
+import { checkUserExists, persistAssessmentSession } from "../services/firebaseSession.js";
 import { sendProtocolToDevice } from "../services/hydrawavDevice.js";
+import { upsertSession, type SavedAssessmentSession } from "../services/sessionStore.js";
 
 export const generateProtocolRouter = Router();
 
@@ -48,7 +49,7 @@ async function handleGenerateProtocol(req: Request, res: Response) {
       .sort(([, a], [, b]) => (b as number) - (a as number));
     for (const [k] of sorted.slice(0, 2)) topZones.push(k);
 
-    // Run voice synthesis + device dispatch in parallel for speed (both have independent timeouts)
+    // Run voice synthesis + device dispatch in parallel for speed
     const [voice, device] = await Promise.all([
       synthesizeVoiceCoaching(gemini.protocol, {
         topZones,
@@ -59,14 +60,47 @@ async function handleGenerateProtocol(req: Request, res: Response) {
       sendProtocolToDevice(gemini.protocol, sessionId),
     ]);
 
-    await persistAssessmentSession({
+    // ── Persistence Logic ──
+    const userExists = await checkUserExists(userId);
+    if (userExists) {
+      await persistAssessmentSession({
+        sessionId,
+        userId,
+        practitionerId,
+        hardwareProtocol: gemini.protocol,
+        wearables,
+        asymmetry,
+      });
+    }
+
+    // Always update the memory store for immediate dashboard updates in the demo
+    const localSession: SavedAssessmentSession = {
       sessionId,
-      userId,
       practitionerId,
-      hardwareProtocol: gemini.protocol,
-      wearables,
-      asymmetry,
-    });
+      clientId: userId,
+      clientEmail: userId,
+      displayName: userId,
+      recoveryScore: (asymmetry.recoveryScore as number) ?? 0,
+      scoreDate: new Date().toISOString().slice(0, 10),
+      mobilityStreakDays: 1, // Fallback, engagement store will handle real value
+      level: 1,
+      status: "Recovering",
+      bodySnapshot: {
+        recoveryScore: (asymmetry.recoveryScore as number) ?? 0,
+        zones: [], // Optional
+        recommendedPlacement: { sunPad: "lower_back", moonPad: "hips" },
+        state: {
+          hrv: (wearables.hrv as number) ?? 0,
+          strain: (wearables.strain as number) ?? 0,
+          readiness: (asymmetry.readiness as any) ?? "stable",
+        }
+      },
+      protocol: gemini.protocol,
+      voiceAudio: voice,
+      deviceSession: device,
+      createdAt: new Date().toISOString(),
+    };
+    upsertSession(localSession);
 
     const validation =
       gemini.source === "gemini"

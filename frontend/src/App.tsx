@@ -87,8 +87,11 @@ function entriesToRecoveryState(
     after: `Score ${latest.score}`,
     trendPoints,
     dailyHabit: latestHabit,
+    entries: sorted,
   };
 }
+
+import { getClients } from "./api/clients";
 
 function PractitionerDashboardPage() {
   const { user } = useAuth();
@@ -100,28 +103,40 @@ function PractitionerDashboardPage() {
     if (!user?.uid) return;
 
     let cancelled = false;
-    setLoading(true);
+    const load = () => {
+      setLoading(true);
+      Promise.all([
+        getClients(),
+        getSessions({ practitionerId: user.uid })
+      ])
+        .then(([clientRes, sessionRes]) => {
+          if (cancelled) return;
+          setClients(clientRes.clients);
+          const sessions = sessionRes.sessions ?? [];
+          setTrendPoints(
+            [...sessions]
+              .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+              .map((s) => s.recoveryScore)
+              .slice(-10)
+          );
+        })
+        .catch((err) => {
+          console.warn("[PractitionerDashboard] load error:", err);
+          if (!cancelled) {
+            setClients([]);
+            setTrendPoints([]);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
 
-    getSessions({ practitionerId: user.uid })
-      .then((res) => {
-        if (cancelled) return;
-
-        const sessions = res.sessions ?? [];
-        setClients(sessionsToClients(sessions));
-        setTrendPoints(sessions.slice(0, 7).map((s) => s.recoveryScore));
-      })
-      .catch((err) => {
-        console.warn("[PractitionerDashboard] load error:", err);
-        if (cancelled) return;
-        setClients([]);
-        setTrendPoints([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
+    load();
+    window.addEventListener("vivawav3:sessions-updated", load);
     return () => {
       cancelled = true;
+      window.removeEventListener("vivawav3:sessions-updated", load);
     };
   }, [user?.uid]);
 
@@ -136,6 +151,8 @@ function PractitionerDashboardPage() {
   );
 }
 
+import { getEngagement } from "./api/engagement";
+
 function RecoveryDashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<RecoveryState | null>(null);
@@ -145,32 +162,50 @@ function RecoveryDashboardPage() {
     if (!user?.uid) return;
 
     let cancelled = false;
-    setLoading(true);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [sessionRes, engData] = await Promise.all([
+          getSessions({ clientId: user.uid }),
+          getEngagement(user.uid).catch(() => ({ 
+            userId: user.uid, xpTotal: 0, level: 1, streakDays: 0, lastSessionDate: null 
+          }))
+        ]);
 
-    getSessions({ clientId: user.uid })
-      .then((res) => {
         if (cancelled) return;
+        const sessions = sessionRes.sessions ?? [];
+        if (sessions.length === 0) {
+          setData(null);
+          return;
+        }
 
-        const sessions = res.sessions ?? [];
         const latest = [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
         const latestHabit =
-          latest && typeof (latest.protocol as { dailyHabit?: unknown } | undefined)?.dailyHabit === "string"
-            ? String((latest.protocol as { dailyHabit?: string }).dailyHabit)
+          latest && typeof (latest.protocol as any)?.dailyHabit === "string"
+            ? String((latest.protocol as any).dailyHabit)
             : undefined;
 
-        setData(entriesToRecoveryState(sessionsToRecoveryEntries(sessions), latestHabit));
-      })
-      .catch((err) => {
+        const state = entriesToRecoveryState(sessionsToRecoveryEntries(sessions), latestHabit);
+        if (state) {
+          state.xp = engData.xpTotal;
+          state.level = engData.level;
+          state.streakDays = engData.streakDays;
+          state.nextLevelXp = engData.level * 200;
+        }
+        setData(state);
+      } catch (err) {
         console.warn("[RecoveryDashboard] load error:", err);
-        if (cancelled) return;
-        setData(null);
-      })
-      .finally(() => {
+        if (!cancelled) setData(null);
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
 
+    load();
+    window.addEventListener("vivawav3:sessions-updated", load);
     return () => {
       cancelled = true;
+      window.removeEventListener("vivawav3:sessions-updated", load);
     };
   }, [user?.uid]);
 

@@ -83,6 +83,7 @@ export type RecoveryState = {
   after: string;
   trendPoints: number[];
   dailyHabit?: string;
+  entries: RecoveryEntry[];
 };
 
 export type SessionStatus = "Ready" | "Recovering" | "New" | "Needs Attention";

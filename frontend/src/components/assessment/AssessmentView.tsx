@@ -146,6 +146,26 @@ export function AssessmentView() {
     } as any);
   }, [viewState, clientEmail, selectedProfileId, selectedGoal, updateDraft]);
 
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (clientEmail.includes("@") && clientEmail.includes(".")) {
+        try {
+          const res = await apiFetch(`/api/clients/check/${clientEmail}`);
+          const data = await res.json();
+          setIsRegistered(data.exists);
+        } catch (err) {
+          console.warn("[AssessmentView] check-user error:", err);
+          setIsRegistered(false);
+        }
+      } else {
+        setIsRegistered(null);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [clientEmail]);
+
   useEffect(() => {
     poseLandmarkerRef.current = landmarker;
   }, [landmarker]);
@@ -272,8 +292,34 @@ export function AssessmentView() {
     const selectedProfile =
       MOCK_PROFILES.find((p) => p.id === selectedProfileId) ?? MOCK_PROFILES[0];
 
+    // --- Dynamic Scoring Logic ---
+    const calculateUnifiedScore = (asymRaw: number, hrv: number, strain: number, goal: string) => {
+      // 1. Asymmetry component (0-100) - 100 is perfectly balanced
+      const symmetryScore = Math.max(0, 100 - asymRaw * 100);
+      
+      // 2. Weighting based on user Goal
+      let wSym = 0.5, wHrv = 0.3, wStrain = 0.2;
+      if (goal === "Prep") { wSym = 0.7; wHrv = 0.2; wStrain = 0.1; }
+      else if (goal === "Relaxation") { wSym = 0.3; wHrv = 0.5; wStrain = 0.2; }
+      
+      // 3. Normalized Wearable inputs
+      const hrvScore = Math.min(100, hrv);
+      const strainPotential = Math.max(0, 100 - strain);
+      
+      // 4. Base calculation
+      const base = (symmetryScore * wSym) + (hrvScore * wHrv) + (strainPotential * wStrain);
+      
+      // 5. Add a small organic variance (+/- 3 points) to feel dynamic/live
+      const variance = (Math.random() * 6) - 3;
+      
+      return Math.round(Math.max(10, Math.min(99, base + variance)));
+    };
+
+    const asymRaw = aggregated.zones.reduce((acc, z) => acc + z.intensity, 0) / Math.max(1, aggregated.zones.length);
+    const finalRecoveryScore = calculateUnifiedScore(asymRaw, selectedProfile.hrv, selectedProfile.strain, selectedGoal);
+
     const nextSnapshot: BodySnapshot = {
-      recoveryScore: aggregated.recoveryScore,
+      recoveryScore: finalRecoveryScore,
       zones: aggregated.zones.map((z) => ({
         area: z.area,
         intensity: z.intensity,
@@ -282,7 +328,7 @@ export function AssessmentView() {
       state: {
         hrv: selectedProfile.hrv,
         strain: selectedProfile.strain,
-        readiness: aggregated.readiness,
+        readiness: finalRecoveryScore >= 75 ? "high" : finalRecoveryScore < 50 ? "low" : "stable",
       },
     };
 
@@ -503,6 +549,17 @@ export function AssessmentView() {
               onChange={(e) => setClientEmail(e.target.value)}
               type="email"
               autoComplete="email"
+              helperText={
+                isRegistered === true ? (
+                  <Typography component="span" sx={{ color: "#4ade80", fontSize: 11, fontWeight: 700 }}>
+                    ✓ Registered Client (History will be saved)
+                  </Typography>
+                ) : isRegistered === false ? (
+                  <Typography component="span" sx={{ color: "#94a3b8", fontSize: 11 }}>
+                    New Client (Email not found in database)
+                  </Typography>
+                ) : null
+              }
               sx={{
                 "& .MuiInputBase-input": { color: "#f8fafc" },
                 "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.1)" },
