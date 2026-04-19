@@ -10,13 +10,13 @@
 
 ---
 
-## ?? Core Philosophy
+##  Core Philosophy
 
 > *The body supports its own recovery; the practitioner guides; the platform empowers.*
 
 ---
 
-## ? Key Features
+##  Key Features
 
 ### Assessment Phase
 - **Real-time camera capture** � 60-second movement video recording in the browser
@@ -46,7 +46,7 @@
 
 ---
 
-## ??? Technology Stack
+##  Technology Stack
 
 ### Frontend
 
@@ -82,7 +82,7 @@
 
 ---
 
-## ?? Documentation
+##  Documentation
 
 | Document | Purpose |
 |----------|---------|
@@ -94,7 +94,7 @@
 
 ---
 
-## ?? Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js = 18.0.0
@@ -146,22 +146,22 @@ npm run start
 
 ---
 
-## ?? Component Architecture
+##  Component Architecture
 
 **Assessment Flow:**
 \\\
-CameraCapture ? MediaPipe Detection ? Asymmetry Scoring ? 
-Backend API ? Hardware Protocol + Voice Audio
+CameraCapture  MediaPipe Detection  Asymmetry Scoring  
+Backend API  Hardware Protocol + Voice Audio
 \\\
 
 **Recovery Dashboard:**
 \\\
-Firebase Auth ? Firestore Listeners ? Real-time Updates
+Firebase Auth  Firestore Listeners  Real-time Updates
 \\\
 
 ---
 
-## ?? AI Integration
+##  AI Integration
 
 Google Gemini API generates personalized Hardware_Protocol:
 1. Frontend captures movement asymmetry
@@ -174,7 +174,7 @@ Google Gemini API generates personalized Hardware_Protocol:
 
 ---
 
-## ??? Development
+##  Development
 
 **Frontend:**
 \\\ash
@@ -188,7 +188,7 @@ npm run dev -w server
 
 ---
 
-## ?? Troubleshooting
+##  Troubleshooting
 
 **API 404 errors:**
 - Ensure both frontend and backend running
@@ -211,7 +211,7 @@ npm run dev -w server
 
 ---
 
-## ?? Production Deployment
+##  Production Deployment
 
 ### Environment Variables
 
@@ -241,22 +241,22 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 
 ---
 
-## ?? Wellness Terminology
+##  Wellness Terminology
 
 ViVaWav3 is a wellness platform.
 
-**? Approved:**
+** Approved:**
 - Recovery, wellness, mobility, performance
 - Supports, empowers, enhances
 
-**? Prohibited:**
+** Prohibited:**
 - Medical device, clinical, diagnostic
 - Treats, cures, diagnoses, heals
 - Patient, replaces practitioner
 
 ---
 
-## ?? Contributing
+##  Contributing
 
 1. Fork repository
 2. Create feature branch: \git checkout -b feature/your-feature\
@@ -271,7 +271,7 @@ ViVaWav3 is a wellness platform.
 
 ---
 
-## ?? Support
+##  Support
 
 For questions:
 - Check documentation index
@@ -280,13 +280,13 @@ For questions:
 
 ---
 
-## ?? Hackathon Context
+##  Hackathon Context
 
 **ViVaWav3** � GlobeHack Season 1, Recovery Intelligence track
 
 Integrates:
-- ?? MediaPipe computer vision
-- ?? Google Gemini LLM
-- ??? ElevenLabs voice synthesis
-- ?? Firebase real-time database
-- ? React + TypeScript + Express stack
+-  MediaPipe computer vision
+-  Google Gemini LLM
+-  ElevenLabs voice synthesis
+-  Firebase real-time database
+-  React + TypeScript + Express stack
