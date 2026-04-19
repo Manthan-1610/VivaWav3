@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useRef,
@@ -15,7 +15,6 @@ import type {
   GenerateProtocolResponse,
   HardwareProtocol,
 } from "../../types/vivawav3";
-import { mapHardwareProtocolToPreview } from "../../types/vivawav3";
 import { postGenerateProtocol } from "../../api/generateProtocol";
 import { useAuth } from "../../auth/useAuth";
 import { roundTripJson } from "../../lib/jsonRoundTrip";
@@ -83,6 +82,8 @@ export function AssessmentView() {
     useState<GenerateProtocolResponse["voiceAudio"] | null>(null);
   const [validation, setValidation] =
     useState<GenerateProtocolResponse["validation"] | null>(null);
+  const [deviceSession, setDeviceSession] =
+    useState<GenerateProtocolResponse["deviceSession"] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -314,10 +315,15 @@ export function AssessmentView() {
       })),
       recommendedPlacement: aggregated.recommendedPlacement,
       state: {
-        hrv: 45,
-        strain: Math.round(
-          40 + (aggregated.zones[0]?.intensity ?? 0) * 40,
-        ),
+        // Derive a realistic mock HRV from pose-based readiness so Gemini gets a coherent signal.
+        // Low readiness (high asymmetry) → low HRV (28–42). High → high HRV (62–80). Stable → mid.
+        hrv:
+          aggregated.readiness === "low"
+            ? Math.round(28 + Math.random() * 14)   // 28–42
+            : aggregated.readiness === "high"
+            ? Math.round(62 + Math.random() * 18)   // 62–80
+            : Math.round(42 + Math.random() * 18),  // 42–60
+        strain: Math.round(40 + (aggregated.zones[0]?.intensity ?? 0) * 40),
         readiness: aggregated.readiness,
       },
     };
@@ -359,10 +365,11 @@ export function AssessmentView() {
 
       const res = await postGenerateProtocol(payload);
 
-      setProtocol(mapHardwareProtocolToPreview(res.hardwareProtocol));
+      setProtocol(res.hardwareProtocol);
       setSessionId(res.sessionId);
       setVoiceAudio(res.voiceAudio ?? null);
       setValidation(res.validation ?? null);
+      setDeviceSession(res.deviceSession ?? null);
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Something went wrong while sending your assessment.";
@@ -452,6 +459,7 @@ export function AssessmentView() {
         sessionId={sessionId}
         voiceAudio={voiceAudio}
         validation={validation}
+        deviceSession={deviceSession}
       />
 
       <SubmitAssessment
