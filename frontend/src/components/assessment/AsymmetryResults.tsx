@@ -224,6 +224,18 @@ export function AsymmetryResults({
                   Light: Red {protocol.photobiomodulation.redNm}nm · Blue {protocol.photobiomodulation.blueNm}nm
                 </Typography>
               )}
+
+              {/* Daily Habit specs */}
+              {protocol.dailyHabit && (
+                <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
+                  <Typography sx={{ fontSize: 11, color: "#22c55e", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, mb: 0.5 }}>
+                    Daily Recovery Habit (1-Minute)
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, color: "#f8fafc", lineHeight: 1.6 }}>
+                    {protocol.dailyHabit}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           )}
 

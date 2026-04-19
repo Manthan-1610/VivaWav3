@@ -25,7 +25,7 @@ const HYDRAWAV3_PASSWORD = "1234";
  * Based on the ASU hackathon device configuration — the broker routes
  * messages on this topic to the physical device.
  */
-const DEVICE_COMMAND_TOPIC = "HydraWav3Pro/command";
+const DEVICE_COMMAND_TOPIC = "HydraWav3Pro/config";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,49 +119,63 @@ function buildMqttPayload(
 ): Record<string, unknown> {
   const sun = protocol.sunPad as Record<string, unknown> | undefined;
   const moon = protocol.moonPad as Record<string, unknown> | undefined;
-  const pbm = protocol.photobiomodulation as Record<string, unknown> | undefined;
+
+  // 1. Sequence Mapping
+  const sequence = Array.isArray(protocol.sequence) 
+    ? (protocol.sequence as Record<string, unknown>[]) 
+    : [];
+  
+  const sessionCount = sequence.length > 0 ? sequence.length : 1;
+  const cycleDurations = sequence.length > 0 
+    ? sequence.map((s) => Number(s.durationMinutes) || 3) 
+    : [3];
+
+  const cycleRepetitions = Array(sessionCount).fill(6);
+  const cyclePauses = Array(sessionCount).fill(3);
+  const pauseIntervals = Array(sessionCount).fill(3);
+
+  // 2. Modality Mapping (Moon -> Left, Sun -> Right)
+  const leftMode = moon?.thermalMode === "heat" ? "HotRed" : "ColdBlue";
+  const rightMode = sun?.thermalMode === "cool" ? "ColdBlue" : "HotRed";
+  
+  const leftFuncs = Array(sessionCount).fill(`left${leftMode}`);
+  const rightFuncs = Array(sessionCount).fill(`right${rightMode}`);
+
+  // 3. Intensity Mapping
+  // PWM ranges are 0-255. AI gives 0-100.
+  const pwmHot = Math.round(((Number(sun?.lightIntensity) || 50) / 100) * 255);
+  const pwmCold = Math.round(((Number(moon?.lightIntensity) || 50) / 100) * 255);
+  
+  const pwmValues = {
+    hot: Array(sessionCount).fill(pwmHot),
+    cold: Array(sessionCount).fill(pwmCold),
+  };
+
+  const vibMax = Math.round(((Number(sun?.vibroAcousticIntensity) || 50) / 100) * 255);
+  const totalDuration = Math.round((protocol.sessionDurationMinutes ?? 9) * 60);
 
   return {
-    command: "start_session",
-    sessionId,
-    schemaVersion: protocol.schemaVersion ?? "1.0.0",
-    sessionDurationMinutes: protocol.sessionDurationMinutes ?? 9,
-    modalities: {
-      thermal: {
-        enabled: true,
-        sunPad: {
-          placement: sun?.placement ?? "lower_back",
-          thermalMode: sun?.thermalMode ?? "heat",
-          lightIntensity: Number(sun?.lightIntensity ?? 50),
-          vibroAcousticIntensity: Number(sun?.vibroAcousticIntensity ?? 40),
-        },
-        moonPad: {
-          placement: moon?.placement ?? "mid_back",
-          thermalMode: moon?.thermalMode ?? "cool",
-          lightIntensity: Number(moon?.lightIntensity ?? 50),
-          vibroAcousticIntensity: Number(moon?.vibroAcousticIntensity ?? 40),
-        },
-      },
-      photobiomodulation: {
-        enabled: true,
-        redNm: Number(pbm?.redNm ?? 660),
-        blueNm: Number(pbm?.blueNm ?? 450),
-      },
-      vibroAcoustic: {
-        enabled: true,
-      },
-    },
-    sequence: Array.isArray(protocol.sequence)
-      ? (protocol.sequence as Record<string, unknown>[]).map((s) => ({
-          order: s.order,
-          modality: s.modality,
-          intensity: s.intensity,
-          durationMinutes: s.durationMinutes,
-          notes: s.notes ?? "",
-        }))
-      : [],
-    source: "ViVaWav3-AI",
-    timestamp: new Date().toISOString(),
+    mac: "74:4D:BD:A0:A3:EC", // Hydrawav3 Pro Device MAC
+    sessionCount,
+    sessionPause: 30,
+    sDelay: 0,
+    cycle1: 1,
+    cycle5: 1,
+    edgeCycleDuration: 9,
+    cycleRepetitions,
+    cycleDurations,
+    cyclePauses,
+    pauseIntervals,
+    leftFuncs,
+    rightFuncs,
+    pwmValues,
+    playCmd: 1, // Start Session
+    led: 1,
+    hotDrop: 5,
+    coldDrop: 3,
+    vibMin: 15,
+    vibMax,
+    totalDuration,
   };
 }
 

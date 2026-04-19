@@ -47,7 +47,8 @@ Hardware_Protocol JSON shape (return exactly this structure; use schemaVersion "
   "photobiomodulation": {
     "redNm": 660,
     "blueNm": 450
-  }
+  },
+  "dailyHabit": "<optional string; a 1-minute actionable recovery habit like a stretch or breathing exercise>"
 }
 
 Output rules:
