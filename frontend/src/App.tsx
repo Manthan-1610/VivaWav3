@@ -1,33 +1,74 @@
-import { CssBaseline, Box, Container, Typography } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AssessmentErrorBoundary } from "./components/assessment/AssessmentErrorBoundary";
 import { AssessmentView } from "./components/assessment/AssessmentView";
+import { PractitionerDashboard } from "./components/practitioner/PractitionerDashboard";
+import { RecoveryDashboard } from "./components/recovery/RecoveryDashboard";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { useAuth } from "./auth/useAuth";
+import { AppShell } from "./layout/AppShell";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+
+function RootRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "practitioner") return <Navigate to="/assessment" replace />;
+  return <Navigate to="/recovery" replace />;
+}
 
 export function App() {
-  return (
-    <>
-      <CssBaseline />
-      <Box
-        sx={{
-          minHeight: "100vh",
-          py: 3,
-          background:
-            "radial-gradient(circle at top left, rgba(168, 187, 163, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(184, 124, 76, 0.16), transparent 30%), #0b1220",
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography
-            sx={{
-              mb: 2,
-              color: "#f8fafc",
-              fontSize: { xs: "2rem", md: "3rem" },
-              fontWeight: 900,
-            }}
-          >
-            ViVaWav3 Assessment
-          </Typography>
+  const { loading } = useAuth();
 
-          <AssessmentView />
-        </Container>
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <CircularProgress />
       </Box>
-    </>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/assessment"
+          element={
+            <ProtectedRoute roles={["practitioner"]}>
+              <AssessmentErrorBoundary>
+                <AssessmentView />
+              </AssessmentErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practitioner"
+          element={
+            <ProtectedRoute roles={["practitioner"]}>
+              <PractitionerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recovery"
+          element={
+            <ProtectedRoute roles={["client"]}>
+              <RecoveryDashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

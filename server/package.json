@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node ./scripts/copy-schemas.mjs",
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "firebase-admin": "^13.8.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

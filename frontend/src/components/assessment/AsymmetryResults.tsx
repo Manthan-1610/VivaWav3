@@ -1,12 +1,21 @@
-import { Box, LinearProgress, Paper, Stack, Typography } from "@mui/material";
-import type { BodySnapshot, HardwareProtocol } from "../../types/vivawav3";
+import { Box, Chip, LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import type { BodySnapshot, GenerateProtocolResponse, HardwareProtocol } from "../../types/vivawav3";
 
 type Props = {
   snapshot: BodySnapshot | null;
   protocol: HardwareProtocol | null;
+  sessionId?: string | null;
+  voiceAudio?: GenerateProtocolResponse["voiceAudio"] | null;
+  validation?: GenerateProtocolResponse["validation"] | null;
 };
 
-export function AsymmetryResults({ snapshot, protocol }: Props) {
+export function AsymmetryResults({
+  snapshot,
+  protocol,
+  sessionId,
+  voiceAudio,
+  validation,
+}: Props) {
   return (
     <Paper
       sx={{
@@ -94,8 +103,69 @@ export function AsymmetryResults({ snapshot, protocol }: Props) {
               <Typography sx={{ color: "#f8fafc", fontWeight: 700 }}>
                 {protocol.duration} min · {protocol.thermal} · {protocol.light}
               </Typography>
+              <Typography sx={{ fontSize: 12, color: "#94a3b8", mt: 0.5 }}>
+                {protocol.resonance}
+              </Typography>
             </Box>
           )}
+
+          {validation ? (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <Typography sx={{ fontSize: 12, color: "#94a3b8" }}>
+                Protocol source
+              </Typography>
+              <Chip
+                size="small"
+                label={
+                  validation.source === "gemini"
+                    ? `Gemini · ${validation.attempts} attempt(s)`
+                    : `Fallback · ${validation.attempts} attempt(s)`
+                }
+                sx={{
+                  bgcolor:
+                    validation.source === "gemini"
+                      ? "rgba(168, 187, 163, 0.25)"
+                      : "rgba(184, 124, 76, 0.25)",
+                  color: "#e2e8f0",
+                  fontWeight: 700,
+                }}
+              />
+              {validation.reason ? (
+                <Typography sx={{ fontSize: 11, color: "#64748b" }}>
+                  {validation.reason}
+                </Typography>
+              ) : null}
+            </Box>
+          ) : null}
+
+          {voiceAudio?.url ? (
+            <Box>
+              <Typography sx={{ fontSize: 12, color: "#94a3b8", mb: 0.5 }}>
+                Voice coaching
+                {voiceAudio.fallback ? " (fallback)" : ""} ·{" "}
+                {Math.round(voiceAudio.durationSeconds)}s
+              </Typography>
+              <audio
+                controls
+                src={voiceAudio.url}
+                style={{ width: "100%", maxHeight: 40 }}
+              />
+            </Box>
+          ) : null}
+
+          {sessionId ? (
+            <Typography sx={{ fontSize: 11, color: "#64748b" }}>
+              Session: {sessionId}
+            </Typography>
+          ) : null}
         </Stack>
       )}
     </Paper>
