@@ -43,6 +43,7 @@ export type HardwareProtocol = {
   sunPad: HardwareProtocolPad;
   moonPad: HardwareProtocolPad;
   photobiomodulation?: { redNm: number; blueNm: number };
+  dailyHabit?: string;
 };
 
 // ─── API response types ───────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export type RecoveryState = {
   before: string;
   after: string;
   trendPoints: number[];
+  dailyHabit?: string;
 };
 
 export type RecoveryListResponse = {

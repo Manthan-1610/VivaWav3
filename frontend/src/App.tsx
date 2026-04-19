@@ -207,6 +207,7 @@ function RecoveryDashboardPage() {
             before: "Score 62",
             after: "Score 76",
             trendPoints: [55, 62, 68, 64, 70, 74, 76],
+            dailyHabit: "Perform 5 slow, deep body-weight squats each morning to maintain hip and lower back mobility."
           });
       })
       .finally(() => { if (!cancelled) setLoading(false); });

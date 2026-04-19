@@ -28,6 +28,16 @@ export function RecoveryDashboard({ data, isLoading = false }: Props) {
         level={data.level}
         nextLevelXp={data.nextLevelXp}
       />
+      {data.dailyHabit && (
+        <Box sx={{ p: 2, borderRadius: 4, bgcolor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.25)" }}>
+          <Typography sx={{ fontSize: 12, color: "#22c55e", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, mb: 0.5 }}>
+            Daily Recovery Habit
+          </Typography>
+          <Typography sx={{ fontSize: 14, color: "#f8fafc", lineHeight: 1.6 }}>
+            {data.dailyHabit}
+          </Typography>
+        </Box>
+      )}
       <BeforeAfterComparison before={data.before} after={data.after} />
     </Stack>
   );
