@@ -46,25 +46,57 @@ export function AppShell() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#0b1220" }}>
+    <Box sx={{ 
+      minHeight: "100vh", 
+      bgcolor: "#0b1220",
+      position: 'relative',
+      overflow: 'hidden',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: '-10%',
+        right: '-5%',
+        width: '45%',
+        height: '45%',
+        background: 'radial-gradient(circle, rgba(184, 124, 76, 0.07) 0%, transparent 75%)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: '-10%',
+        left: '-5%',
+        width: '45%',
+        height: '45%',
+        background: 'radial-gradient(circle, rgba(168, 187, 163, 0.05) 0%, transparent 75%)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }
+    }}>
       <AppBar
         position="sticky"
         elevation={0}
         sx={{
-          bgcolor: "rgba(11, 18, 32, 0.92)",
-          backdropFilter: "blur(14px)",
+          bgcolor: "rgba(11, 18, 32, 0.85)",
+          backdropFilter: "blur(20px)",
           borderBottom: "1px solid rgba(148, 163, 184, 0.12)",
+          zIndex: 10,
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ py: 1.2, gap: 2 }}>
+          <Toolbar disableGutters sx={{ py: 0.8, gap: 2 }}>
             <Typography
               sx={{
                 color: "#f8fafc",
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: 900,
                 mr: 2,
                 whiteSpace: "nowrap",
+                letterSpacing: -0.5,
+                background: "linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}
             >
               ViVaWav3
@@ -75,16 +107,20 @@ export function AppShell() {
               textColor="inherit"
               sx={{
                 flex: 1,
-                minHeight: 40,
+                minHeight: 48,
                 "& .MuiTabs-indicator": {
                   backgroundColor: "#B87C4C",
                   height: 3,
+                  borderRadius: '3px 3px 0 0',
                 },
                 "& .MuiTab-root": {
-                  minHeight: 40,
+                  minHeight: 48,
                   textTransform: "none",
                   fontWeight: 800,
-                  color: "#cbd5e1",
+                  fontSize: 14,
+                  color: "#94a3b8",
+                  transition: 'color 0.2s',
+                  "&:hover": { color: "#cbd5e1" },
                 },
                 "& .Mui-selected": {
                   color: "#f8fafc",
@@ -102,29 +138,45 @@ export function AppShell() {
             </Tabs>
 
             <Stack
-  direction="row"
-  spacing={1.5}
-  sx={{ alignItems: "center" }}
->
-              <Chip
-                label={user?.email ?? user?.uid ?? "signed in"}
-                size="small"
-                sx={{
-                  bgcolor: "rgba(168, 187, 163, 0.14)",
-                  color: "#d9e6d6",
-                  fontWeight: 700,
-                }}
-              />
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center" }}
+            >
+              <Stack direction="row" spacing={1} sx={{ display: { xs: 'none', md: 'flex' } }}>
+                <Chip
+                  label={user?.role?.toUpperCase() || "USER"}
+                  size="small"
+                  sx={{
+                    bgcolor: "rgba(184, 124, 76, 0.15)",
+                    color: "#B87C4C",
+                    fontWeight: 900,
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    height: 20,
+                    border: '1px solid rgba(184, 124, 76, 0.25)'
+                  }}
+                />
+                <Typography sx={{ color: "#94a3b8", fontSize: 13, fontWeight: 700 }}>
+                  {user?.email?.split('@')[0]}
+                </Typography>
+              </Stack>
+
               <Button
-                variant="outlined"
+                variant="contained"
                 onClick={handleSignOut}
                 sx={{
+                  bgcolor: "rgba(255, 255, 255, 0.05)",
                   color: "#f8fafc",
-                  borderColor: "rgba(248, 250, 252, 0.35)",
                   fontWeight: 800,
+                  fontSize: 12,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
                   "&:hover": {
-                    borderColor: "#f8fafc",
-                    bgcolor: "rgba(248, 250, 252, 0.06)",
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                    borderColor: "rgba(255, 255, 255, 0.2)",
                   },
                 }}
               >
@@ -135,7 +187,7 @@ export function AppShell() {
         </Container>
       </AppBar>
 
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
         <Outlet />
       </Container>
     </Box>

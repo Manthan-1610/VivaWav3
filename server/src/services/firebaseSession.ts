@@ -62,9 +62,22 @@ function recoveryScore(
 }
 
 
+export async function checkUserExists(email: string): Promise<boolean> {
+  const db = getAdminDb();
+  if (!db) return false;
+  try {
+    // Query users collection for the provided email field
+    const snap = await db.collection("users").where("email", "==", email).limit(1).get();
+    return !snap.empty;
+  } catch (e) {
+    console.warn("[firebase] checkUserExists error:", e);
+    return false;
+  }
+}
+
 export async function persistAssessmentSession(input: {
   sessionId: string;
-  userId: string;
+  userId: string; // This could be email or UID
   practitionerId: string;
   hardwareProtocol: HardwareProtocol;
   wearables: Record<string, unknown>;
@@ -108,8 +121,6 @@ export async function persistAssessmentSession(input: {
   });
 
   // ── Engagement: XP / streak / level ───────────────────────────────────────
-  // 50 XP per completed session. Level threshold: floor(xpTotal / 200) + 1.
-  // Streak counts consecutive calendar days; resets if gap > 1 day.
   const XP_PER_SESSION = 50;
   await withFirestoreRetry("engagement write", async () => {
     const engRef = db.collection("engagement").doc(input.userId);
@@ -131,18 +142,34 @@ export async function persistAssessmentSession(input: {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
-    let newStreak = 1; // default: first session or broken streak
+    let newStreak = 1;
     if (lastDate === date) {
-      newStreak = prevStreak; // multiple sessions same day — keep streak
+      newStreak = prevStreak;
     } else if (lastDate === yesterdayStr) {
-      newStreak = prevStreak + 1; // consecutive day — extend streak
+      newStreak = prevStreak + 1;
     }
 
     await engRef.set(
       { userId: input.userId, xpTotal: newXp, level: newLevel, mobilityStreakDays: newStreak, lastSessionDate: date },
       { merge: true },
     );
-    console.log(`[engagement] uid=${input.userId} xp=${newXp} level=${newLevel} streak=${newStreak}`);
   });
+
+  // ── Link Client to Practitioner ───────────────────────────────────────────
+  if (input.practitionerId && input.userId) {
+    await withFirestoreRetry("link client write", async () => {
+      const pracRef = db.collection("users").doc(input.practitionerId);
+      const pracSnap = await pracRef.get();
+      if (pracSnap.exists) {
+        const data = pracSnap.data() as { clientIds?: string[] } | undefined;
+        const clientIds = Array.isArray(data?.clientIds) ? data!.clientIds : [];
+        if (!clientIds.includes(input.userId)) {
+          await pracRef.update({
+            clientIds: FieldValue.arrayUnion(input.userId)
+          });
+        }
+      }
+    });
+  }
 }
 
