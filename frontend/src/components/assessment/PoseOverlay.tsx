@@ -3,9 +3,11 @@ import type { BodyZone } from "../../types/vivawav3";
 
 type Props = {
   zones: BodyZone[];
+  /** True when MediaPipe currently sees a full pose (live preview). */
+  poseDetected?: boolean;
 };
 
-export function PoseOverlay({ zones }: Props) {
+export function PoseOverlay({ zones, poseDetected = false }: Props) {
   return (
     <Paper
       sx={{
@@ -43,15 +45,17 @@ export function PoseOverlay({ zones }: Props) {
             border: "1px dashed rgba(168, 187, 163, 0.5)",
           }}
         />
-        <Typography sx={{ fontSize: 12, color: "#cbd5e1" }}>
-          Landmark visualization placeholder
+        <Typography sx={{ fontSize: 12, color: "#cbd5e1", px: 2, textAlign: "center" }}>
+          {poseDetected
+            ? "Landmarks are drawn on the live preview above. Zone intensities appear after you generate a snapshot."
+            : "Step into frame so shoulders and hips are visible. Landmarks appear on the camera preview when a pose is detected."}
         </Typography>
       </Box>
 
       <Box sx={{ mt: 1.5, display: "grid", gap: 1 }}>
         {zones.length === 0 ? (
           <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>
-            No zones yet. Run assessment to populate asymmetry signals.
+            No asymmetry zones yet. Record movement, then generate a body snapshot.
           </Typography>
         ) : (
           zones.map((zone) => (
