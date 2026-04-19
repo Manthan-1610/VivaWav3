@@ -70,6 +70,8 @@ export function AssessmentView() {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [poseSamples, setPoseSamples] = useState<PoseJointSample[]>([]);
   const [processingRecording, setProcessingRecording] = useState(false);
+  // Zones immediately available after blob analysis (before API round-trip).
+  const [liveZones, setLiveZones] = useState<{ area: string; intensity: number }[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -255,15 +257,27 @@ export function AssessmentView() {
       setProcessingRecording(true);
       void estimateSamplesFromRecordedBlob(blob, pl)
         .then(({ samples, lastLandmarks: lm }) => {
+          const usedSamples = samples.length > 0 ? samples : poseSamples;
           if (samples.length > 0) {
             setPoseSamples(samples);
-            if (lm?.length) setLandmarksForExport(lm);
+          }
+          // ── Key fix: immediately surface the detected zones and landmark
+          // frame so the PoseOverlay populates right after the recording stops,
+          // not only after the API call finishes.
+          const agg = aggregatePoseSamples(usedSamples);
+          if (agg.poseFound) {
+            setLiveZones(agg.zones);
+            if (lm?.length) {
+              setLandmarksForExport(lm);
+              setLastLandmarks(lm); // keep skeleton visible on camera canvas too
+            }
           }
         })
         .catch(() => {
           /* keep live samples collected during recording */
         })
         .finally(() => setProcessingRecording(false));
+
     };
 
     mr.start(500);
@@ -370,6 +384,8 @@ export function AssessmentView() {
       setVoiceAudio(res.voiceAudio ?? null);
       setValidation(res.validation ?? null);
       setDeviceSession(res.deviceSession ?? null);
+      // Confirmed snapshot zones supersede live preview
+      setLiveZones([]);
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Something went wrong while sending your assessment.";
@@ -451,7 +467,12 @@ export function AssessmentView() {
         onStopRecording={stopRecording}
       />
 
-      <PoseOverlay zones={snapshot?.zones ?? []} poseDetected={Boolean(lastLandmarks?.length)} />
+      <PoseOverlay
+        zones={snapshot?.zones?.length ? snapshot.zones : liveZones}
+        landmarks={landmarksForExport ?? lastLandmarks}
+        poseDetected={Boolean(lastLandmarks?.length)}
+        analysisComplete={Boolean(snapshot?.zones?.length || liveZones.length)}
+      />
 
       <AsymmetryResults
         snapshot={snapshot}
