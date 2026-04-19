@@ -279,39 +279,43 @@ export function AsymmetryResults({
           {/* ── Device dispatch badge ── */}
           {deviceSession ? (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-              <Typography sx={{ fontSize: 12, color: "#94a3b8" }}>Device dispatch</Typography>
+              <Typography sx={{ fontSize: 12, color: "#94a3b8" }}>Hydrawav3 device</Typography>
               <Chip
                 size="small"
                 label={
-                  deviceSession.live
-                    ? deviceSession.status === "started"
-                      ? "✓ Session started on device"
-                      : "✓ Protocol queued on device"
-                    : deviceSession.status === "simulated"
-                    ? "◎ Simulation mode (no device credentials)"
-                    : "⚠ Dispatch error"
+                  deviceSession.status === "published"
+                    ? "✓ Protocol sent to device"
+                    : deviceSession.status === "error"
+                    ? "⚠ Dispatch failed"
+                    : "◎ Simulation mode"
                 }
                 sx={{
                   fontWeight: 700,
                   bgcolor:
-                    deviceSession.live
-                      ? "rgba(34,197,94,0.15)"
-                      : deviceSession.status === "simulated"
-                      ? "rgba(234,179,8,0.15)"
-                      : "rgba(239,68,68,0.15)",
+                    deviceSession.status === "published"
+                      ? "rgba(34,197,94,0.18)"
+                      : deviceSession.status === "error"
+                      ? "rgba(239,68,68,0.15)"
+                      : "rgba(234,179,8,0.15)",
                   color:
-                    deviceSession.live
+                    deviceSession.status === "published"
                       ? "#86efac"
-                      : deviceSession.status === "simulated"
-                      ? "#fde047"
-                      : "#fca5a5",
+                      : deviceSession.status === "error"
+                      ? "#fca5a5"
+                      : "#fde047",
                 }}
               />
+              {deviceSession.topic ? (
+                <Typography sx={{ fontSize: 11, color: "#475569" }}>
+                  Topic: {deviceSession.topic}
+                </Typography>
+              ) : null}
               <Typography sx={{ fontSize: 11, color: "#475569", width: "100%" }}>
                 {deviceSession.message}
               </Typography>
             </Box>
           ) : null}
+
 
           {/* ── Session ID ── */}
           {sessionId ? (

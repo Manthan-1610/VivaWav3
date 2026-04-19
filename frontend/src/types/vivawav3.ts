@@ -59,9 +59,10 @@ export type GenerateProtocolResponse = {
   /** Hydrawav3 device dispatch result — live when API credentials are configured */
   deviceSession?: {
     live: boolean;
-    deviceSessionId: string;
-    status: "queued" | "started" | "simulated" | "error";
+    topic: string;
+    status: "published" | "simulated" | "error";
     message: string;
+    payload?: Record<string, unknown>;
   };
   validation?: {
     source: "gemini" | "fallback";

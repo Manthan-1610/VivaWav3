@@ -56,6 +56,9 @@ export function AssessmentView() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraKey, setCameraKey] = useState(0);
+  const [cameraStarted, setCameraStarted] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSequenceStarting, setIsSequenceStarting] = useState(false);
   const [poseInitError, setPoseInitError] = useState<string | null>(null);
 
   const [landmarker, setLandmarker] = useState<PoseLandmarker | null>(null);
@@ -110,7 +113,16 @@ export function AssessmentView() {
     };
   }, []);
 
+  // "Start recording" sequence: requests camera, and once stream is available,
+  // it triggers a 3-second countdown before actual recording starts.
+  const startRecordingSequence = useCallback(() => {
+    setIsSequenceStarting(true);
+    setCameraError(null);
+    setCameraStarted(true);
+  }, []);
+
   useEffect(() => {
+    if (!cameraStarted) return;
     let cancelled = false;
     setCameraError(null);
     (async () => {
@@ -136,13 +148,14 @@ export function AssessmentView() {
               : "Camera access was blocked or no camera was found. Allow access and retry.",
           );
           setStream(null);
+          setCameraStarted(false); // allow re-try on next click
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [cameraKey]);
+  }, [cameraStarted, cameraKey]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -207,7 +220,20 @@ export function AssessmentView() {
     mediaRecorderRef.current = null;
     setIsRecording(false);
     isRecordingRef.current = false;
-  }, []);
+
+    // Automatically close camera after recording stops
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    setStream(null);
+    setCameraStarted(false);
+  }, [stream]);
+
+  useEffect(() => {
+    if (stream && isSequenceStarting && countdown === null) {
+      setCountdown(3);
+    }
+  }, [stream, isSequenceStarting, countdown]);
 
   useEffect(() => {
     if (!isRecording) return;
@@ -286,12 +312,29 @@ export function AssessmentView() {
     isRecordingRef.current = true;
   }, [stream]);
 
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown > 0) {
+      const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+      return () => clearTimeout(id);
+    } else {
+      setCountdown(null);
+      setIsSequenceStarting(false);
+      startRecording();
+    }
+  }, [countdown, startRecording]);
+
   const onRetryCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
     }
     setStream(null);
+    setCameraStarted(false);
+    setIsSequenceStarting(false);
+    setCountdown(null);
     setCameraKey((k) => k + 1);
+    // Re-trigger after a tick so the state resets cleanly
+    setTimeout(() => setCameraStarted(true), 50);
   }, [stream]);
 
   const runAssessment = async () => {
@@ -400,7 +443,6 @@ export function AssessmentView() {
   };
 
   const canSubmit =
-    Boolean(stream) &&
     !cameraError &&
     recordingSeconds >= MIN_RECORDING_SECONDS &&
     Boolean(recordedBlob) &&
@@ -458,12 +500,14 @@ export function AssessmentView() {
         videoRef={videoRef}
         stream={stream}
         cameraError={cameraError}
+        cameraStarted={cameraStarted}
+        countdown={countdown}
         onRetryCamera={onRetryCamera}
         isRecording={isRecording}
         recordingSeconds={recordingSeconds}
         maxSeconds={MAX_RECORDING_SECONDS}
         landmarks={lastLandmarks}
-        onStartRecording={startRecording}
+        onStartRecordingSequence={startRecordingSequence}
         onStopRecording={stopRecording}
       />
 

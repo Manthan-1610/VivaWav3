@@ -87,7 +87,7 @@ async function handleGenerateProtocol(req: Request, res: Response) {
       },
       deviceSession: {
         live: device.live,
-        deviceSessionId: device.deviceSessionId,
+        topic: device.topic,
         status: device.status,
         message: device.message,
       },
