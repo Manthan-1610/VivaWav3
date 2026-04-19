@@ -12,8 +12,9 @@ import { RegisterPage } from "./pages/RegisterPage";
 
 function RootRedirect() {
   const { user } = useAuth();
+
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === "practitioner") return <Navigate to="/assessment" replace />;
+  if (user.role === "practitioner") return <Navigate to="/dashboard" replace />;
   return <Navigate to="/recovery" replace />;
 }
 
@@ -51,23 +52,26 @@ export function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
-          path="/practitioner"
+          path="/dashboard"
           element={
             <ProtectedRoute roles={["practitioner"]}>
-              <PractitionerDashboard />
+              <PractitionerDashboard clients={[]} trendPoints={[]} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/recovery"
           element={
             <ProtectedRoute roles={["client"]}>
-              <RecoveryDashboard />
+              <RecoveryDashboard data={null} />
             </ProtectedRoute>
           }
         />
       </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

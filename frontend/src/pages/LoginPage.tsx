@@ -43,7 +43,7 @@ export function LoginPage() {
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2 }}>
       <Container maxWidth="sm">
         <Paper sx={{ p: 3, borderRadius: 3 }}>
-          <Typography variant="h4" fontWeight={900} gutterBottom>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 900 }}>
             Welcome back
           </Typography>
           <Typography sx={{ color: "text.secondary", mb: 3 }}>
@@ -79,4 +79,3 @@ export function LoginPage() {
     </Box>
   );
 }
-
