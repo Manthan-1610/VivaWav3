@@ -1,69 +1,292 @@
 # ViVaWav3
 
-**ViVaWav3** is the autonomous wellness agent for the Hydrawav3 platform (GlobeHack Season 1 — Recovery Intelligence track). It covers **assessment** (MediaPipe movement insights), **in-session personalization** (Express + Gemini + ElevenLabs), and **outcome continuity** (Firebase-backed recovery scores, streaks, XP/level, practitioner trends).
+> **Autonomous Wellness Agent for Hydrawav3 Recovery Intelligence Platform**
 
-## Documentation
+\**ViVaWav3** is a full-stack application for the Hydrawav3 platform (GlobeHack Season 1 � Recovery Intelligence track) that empowers practitioners and clients in their wellness journey. The system seamlessly integrates three critical phases:
 
-| Document | Description |
-|----------|-------------|
-| [docs/requirements.md](docs/requirements.md) | Full requirements and acceptance criteria |
-| [docs/firebase-schema.md](docs/firebase-schema.md) | Firestore / Realtime Database shapes |
-| [docs/api-spec.md](docs/api-spec.md) | Express routes and JSON payloads |
-| [docs/gemini-system-prompt.md](docs/gemini-system-prompt.md) | Gemini system prompt for Hardware_Protocol JSON |
-| [docs/react-components.md](docs/react-components.md) | Phase 1 and Phase 3 React component trees |
-| [docs/hardware-protocol.schema.json](docs/hardware-protocol.schema.json) | JSON Schema for `Hardware_Protocol` validation |
+1. **Know** � Camera-based movement assessment using MediaPipe pose estimation to detect kinematic asymmetry
+2. **Act** � AI-driven personalized hardware protocol generation via Gemini API with voice-guided coaching
+3. **Learn** � Firebase-backed recovery tracking with gamification (streaks, XP, levels) and practitioner trend analytics
 
-## Stack (sprint)
+---
 
-React · Express.js · Firebase (Firestore or Realtime Database) · Gemini · ElevenLabs · MediaPipe (browser)
+## ?? Core Philosophy
 
-## Philosophy
+> *The body supports its own recovery; the practitioner guides; the platform empowers.*
 
-The body supports its own recovery; the practitioner guides; the platform empowers.
+---
 
-## Project layout
+## ? Key Features
 
-| Path | Role |
-|------|------|
-| [frontend/](frontend/) | React (Vite + TypeScript) — assessment UI + dashboards |
-| [server/](server/) | Express (TypeScript) — `/api/generate-protocol`, health, optional Firebase writes |
+### Assessment Phase
+- **Real-time camera capture** � 60-second movement video recording in the browser
+- **Client-side pose estimation** � MediaPipe-powered landmark detection and asymmetry scoring
+- **Intelligent pad placement suggestions** � Sun and Moon pad recommendations based on kinematic asymmetry
+- **Error handling** � Graceful fallbacks when camera unavailable or pose not detected
 
-### Assessment → protocol (`POST /api/generate-protocol`)
+### Protocol Generation
+- **AI-driven personalization** � Google Gemini API generates custom Hardware_Protocol JSON
+- **Wearable signal integration** � HRV, strain, sleep quality, and activity data inform protocol decisions
+- **Voice coaching** � ElevenLabs text-to-speech generates breathing guidance audio
+- **Robust validation** � JSON Schema validation with retry logic and safe fallback protocols
+- **Session persistence** � Firebase integration for session history and recovery tracking
 
-Validates the request body, calls **Gemini** when `GEMINI_API_KEY` is set (otherwise a safe fallback protocol from [server/src/services/fallbackProtocol.ts](server/src/services/fallbackProtocol.ts)), synthesizes voice with **ElevenLabs** when `ELEVENLABS_API_KEY` is set (otherwise a fallback URL from env or demo MP3), and optionally writes **`sessions`** to **Firestore** when `FIREBASE_PROJECT_ID` and `FIREBASE_SERVICE_ACCOUNT_PATH` are set. The assessment page posts to this endpoint after building the movement snapshot (Vite proxies `/api` in dev).
+### Client Dashboard (Recovery Phase)
+- **Daily recovery scores** � Track daily wellness metrics
+- **Mobility streaks** � Consecutive-day streak tracking for engagement
+- **XP & level system** � Gamified progression with experience points and level milestones
+- **Before/after comparisons** � Visual feedback on asymmetry improvements over time
+- **Real-time Firebase sync** � Live data updates without page refresh
 
-### Auth (Firebase) & roles
+### Practitioner Dashboard
+- **Client management** � View all linked clients with real-time status
+- **Trend analytics** � Charts showing recovery score trends per client
+- **Live connection indicator** � Firebase sync status visibility
+- **Bulk insights** � Aggregate metrics across client population
 
-- **Sign up / sign in:** [frontend/src/pages/RegisterPage.tsx](frontend/src/pages/RegisterPage.tsx) and [frontend/src/pages/LoginPage.tsx](frontend/src/pages/LoginPage.tsx) use **Firebase Auth** (email/password).
-- **Profiles:** On registration, a Firestore doc is created at `users/{uid}` with `displayName`, `role` (`practitioner` | `client`), and `createdAt` — aligned with [docs/firebase-schema.md](docs/firebase-schema.md).
-- **Routing:** Practitioners default to **`/assessment`** and can open **`/practitioner`**. Clients default to **`/recovery`**. Routes are guarded in [frontend/src/auth/ProtectedRoute.tsx](frontend/src/auth/ProtectedRoute.tsx).
-- **Passwords (expected behavior):** Firebase **Authentication** stores credentials using Google’s identity backend (hashed; never plaintext). **Firestore does not and should not store passwords** — that would be unsafe. Only profile fields like `displayName` and `role` live in `users/{uid}`.
-- **Sign-in 400 errors:** In Firebase Console → **Authentication** → **Sign-in method**, enable **Email/Password**. Wrong email/password or a restricted API key can also return 400 from `signInWithPassword`.
-- **Firestore rules:** Allow authenticated users to read/write their own `users/{uid}` document in development; tighten for production (e.g. role changes only via Admin SDK).
+---
 
-## Run locally
+## ??? Technology Stack
 
-From the repo root (required so the `server` workspace and `dotenv` install correctly):
+### Frontend
 
-```bash
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| React | 19.0.0 | UI library and component framework |
+| TypeScript | ~5.7.2 | Type-safe development |
+| Vite | 6.0.5 | Build tool and dev server |
+| Firebase | 12.12.0 | Authentication and Database |
+| React Router | 7.14.1 | Client-side routing |
+| Material-UI | 9.0.0 | UI components |
+| Emotion | 11.14.0+ | CSS-in-JS styling |
+| MediaPipe | 0.10.34 | Pose estimation |
+
+### Backend
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Express.js | 4.21.2 | HTTP server |
+| TypeScript | ~5.7.2 | Type-safe development |
+| Node.js | 22.10.5+ | Runtime |
+| Google Gemini | 0.24.1 | Protocol generation |
+| Firebase Admin | 13.8.0 | Database access |
+| AJV | 8.18.0 | JSON validation |
+| CORS | 2.8.5 | Request handling |
+| dotenv | 16.4.7 | Configuration |
+
+### Infrastructure
+- **Database** � Cloud Firestore or Firebase Realtime DB
+- **Auth** � Firebase Authentication
+- **Voice** � ElevenLabs API
+- **AI** � Google Gemini API
+
+---
+
+## ?? Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [docs/requirements.md](docs/requirements.md) | Full specification |
+| [docs/api-spec.md](docs/api-spec.md) | API endpoints |
+| [docs/firebase-schema.md](docs/firebase-schema.md) | Database schema |
+| [docs/react-components.md](docs/react-components.md) | Component structure |
+| [docs/gemini-system-prompt.md](docs/gemini-system-prompt.md) | AI prompts |
+
+---
+
+## ?? Quick Start
+
+### Prerequisites
+- Node.js = 18.0.0
+- npm = 9.0.0
+- Firebase Project
+
+### Installation
+
+\\\ash
+git clone <repository-url>
+cd VivaWav3
 npm install
 npm run dev
-```
+\\\
 
-Do not skip `npm install` at the root; installing only inside `frontend/` leaves the `server` workspace unlinked and APIs will fail to resolve dependencies such as `dotenv`.
+### Environment Configuration
 
-- Web UI: [http://localhost:5173](http://localhost:5173) (proxies `/api` to the API)
-- API: [http://localhost:3001](http://localhost:3001) — health check: `GET /health`
+**Backend** (\server/.env\):
+\\\env
+PORT=3001
+GEMINI_API_KEY=your_key
+ELEVENLABS_API_KEY=your_key
+FIREBASE_PROJECT_ID=your_project
+FIREBASE_SERVICE_ACCOUNT_PATH=./secrets/service-account.json
+\\\
 
-Build:
+**Frontend** (\rontend/.env.local\):
+\\\env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_PROJECT_ID=your_project
+VITE_API_BASE_URL=http://localhost:3001/api
+\\\
 
-```bash
+### Running
+
+\\\ash
+npm run dev
+\\\
+
+- Frontend: http://localhost:5173
+- API: http://localhost:3001
+
+### Build
+
+\\\ash
 npm run build
-```
+npm run start
+\\\
 
-Environment templates (copy to `.env` / `.env.local` and fill in; never commit secrets):
+---
 
-- [server/.env.example](server/.env.example) — `PORT`, Gemini, ElevenLabs, Firebase Admin, Hydrawav3 API, fallbacks
-- [frontend/.env.example](frontend/.env.example) — `VITE_*` Firebase client config and API base URL
+## ?? Component Architecture
 
-**Firebase `auth/invalid-api-key` on the frontend:** the browser must use the **Web app** config from Firebase Console (Project settings → Your apps → Web). Do not paste the Admin SDK private key or other API keys into `VITE_FIREBASE_API_KEY`. Put vars in **`frontend/.env.local`**, keep the `VITE_` prefix, then **restart** `npm run dev` (Vite only reads env at startup).
+**Assessment Flow:**
+\\\
+CameraCapture ? MediaPipe Detection ? Asymmetry Scoring ? 
+Backend API ? Hardware Protocol + Voice Audio
+\\\
+
+**Recovery Dashboard:**
+\\\
+Firebase Auth ? Firestore Listeners ? Real-time Updates
+\\\
+
+---
+
+## ?? AI Integration
+
+Google Gemini API generates personalized Hardware_Protocol:
+1. Frontend captures movement asymmetry
+2. Backend receives asymmetry + wearable data
+3. Gemini generates JSON protocol
+4. ElevenLabs generates voice coaching
+5. Returns protocol + audio URL
+
+**Fallback:** If unavailable, uses safe default protocol.
+
+---
+
+## ??? Development
+
+**Frontend:**
+\\\ash
+npm run dev -w frontend
+\\\
+
+**Backend:**
+\\\ash
+npm run dev -w server
+\\\
+
+---
+
+## ?? Troubleshooting
+
+**API 404 errors:**
+- Ensure both frontend and backend running
+- Check vite.config.ts proxy configuration
+
+**Firebase auth/invalid-api-key:**
+- Use Web app config, not Admin SDK key
+- Ensure VITE_ prefix on frontend vars
+- Restart Vite after env changes
+
+**Gemini API invalid JSON:**
+- Verify API key is valid
+- Check system prompt configuration
+- Backend retries 2 times before fallback
+
+**MediaPipe detection fails:**
+- Improve lighting and camera angle
+- Ensure user in full frame
+- System shows repositioning guidance
+
+---
+
+## ?? Production Deployment
+
+### Environment Variables
+
+**Backend:**
+\\\env
+NODE_ENV=production
+PORT=3001
+GEMINI_API_KEY=***
+ELEVENLABS_API_KEY=***
+FIREBASE_PROJECT_ID=***
+FIREBASE_SERVICE_ACCOUNT_PATH=./secrets/service-account.json
+\\\
+
+**Frontend:**
+\\\env
+VITE_FIREBASE_API_KEY=***
+VITE_FIREBASE_PROJECT_ID=***
+VITE_API_BASE_URL=https://api.yourdomain.com
+\\\
+
+### Security Checklist
+- [ ] Never commit .env or secrets/
+- [ ] Strong Firebase security rules
+- [ ] HTTPS for all API calls
+- [ ] Rotate API keys regularly
+- [ ] Test fallback behaviors
+
+---
+
+## ?? Wellness Terminology
+
+ViVaWav3 is a wellness platform.
+
+**? Approved:**
+- Recovery, wellness, mobility, performance
+- Supports, empowers, enhances
+
+**? Prohibited:**
+- Medical device, clinical, diagnostic
+- Treats, cures, diagnoses, heals
+- Patient, replaces practitioner
+
+---
+
+## ?? Contributing
+
+1. Fork repository
+2. Create feature branch: \git checkout -b feature/your-feature\
+3. Commit changes
+4. Push and open PR
+
+**Guidelines:**
+- TypeScript strict mode
+- Follow component patterns
+- Add error boundaries for routes
+- Use wellness terminology
+
+---
+
+## ?? Support
+
+For questions:
+- Check documentation index
+- Review troubleshooting section
+- Consult component-specific docs
+
+---
+
+## ?? Hackathon Context
+
+**ViVaWav3** � GlobeHack Season 1, Recovery Intelligence track
+
+Integrates:
+- ?? MediaPipe computer vision
+- ?? Google Gemini LLM
+- ??? ElevenLabs voice synthesis
+- ?? Firebase real-time database
+- ? React + TypeScript + Express stack
