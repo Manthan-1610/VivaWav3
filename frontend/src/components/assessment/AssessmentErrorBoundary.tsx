@@ -31,7 +31,7 @@ export class AssessmentErrorBoundary extends Component<Props, State> {
       return (
         <Box sx={{ p: 3 }}>
           <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography fontWeight={800} sx={{ mb: 0.5 }}>
+            <Typography sx={{ fontWeight: 800, mb: 0.5 }}>
               Something went wrong in the assessment view
             </Typography>
             <Typography variant="body2">{this.state.message}</Typography>
