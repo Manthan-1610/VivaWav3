@@ -19,21 +19,48 @@ async function withFirestoreRetry(label: string, fn: () => Promise<unknown>): Pr
   }
 }
 
-/** Deterministic 0–100 wellness score from asymmetry payload (Requirement 8.2 / 8.4). */
-function recoveryScoreFromAsymmetry(asymmetry: Record<string, unknown>): number {
+/**
+ * Multi-signal wellness score (0–100) combining:
+ *   - Asymmetry score     50% weight  (higher asymmetry → lower score)
+ *   - HRV signal          30% weight  (higher HRV → better score; range 20–100ms)
+ *   - Strain signal       20% weight  (higher strain → lower score; range 0–21)
+ * Deterministic: identical inputs → identical score (Requirement 8.4).
+ */
+function recoveryScore(
+  asymmetry: Record<string, unknown>,
+  wearables: Record<string, unknown>,
+): number {
+  // ── Asymmetry component (0–100, lower is better) ───────────────────────────
   const js = asymmetry.jointScores;
-  if (!js || typeof js !== "object" || Array.isArray(js)) return 72;
-  let sum = 0;
-  let n = 0;
-  for (const v of Object.values(js as Record<string, unknown>)) {
-    if (typeof v === "number" && Number.isFinite(v)) {
-      sum += v;
-      n += 1;
+  let asymmetryScore = 72; // default if no joint data
+  if (js && typeof js === "object" && !Array.isArray(js)) {
+    let sum = 0;
+    let n = 0;
+    for (const v of Object.values(js as Record<string, unknown>)) {
+      if (typeof v === "number" && Number.isFinite(v)) { sum += v; n++; }
     }
+    if (n > 0) asymmetryScore = Math.max(0, Math.min(100, Math.round(100 - (sum / n) * 55)));
   }
-  const avg = n > 0 ? sum / n : 0.35;
-  return Math.max(0, Math.min(100, Math.round(100 - avg * 55)));
+
+  // ── HRV component (0–100) ───────────────────────────────────────────────────
+  // Map HRV 20ms→0 to 100ms→100; clamp outside range.
+  let hrvScore = 65; // default (neutral)
+  if (typeof wearables.hrv === "number" && Number.isFinite(wearables.hrv) && wearables.hrv > 0) {
+    hrvScore = Math.max(0, Math.min(100, Math.round(((wearables.hrv - 20) / 80) * 100)));
+  }
+
+  // ── Strain component (0–100, inverted: higher strain → lower score) ─────────
+  // Map strain 0→100 to 21→0; clamp.
+  let strainScore = 60; // default (moderate)
+  if (typeof wearables.strain === "number" && Number.isFinite(wearables.strain) && wearables.strain >= 0) {
+    strainScore = Math.max(0, Math.min(100, Math.round(100 - (wearables.strain / 21) * 100)));
+  }
+
+  // Weighted composite
+  const composite = asymmetryScore * 0.5 + hrvScore * 0.3 + strainScore * 0.2;
+  return Math.max(0, Math.min(100, Math.round(composite)));
 }
+
 
 export async function persistAssessmentSession(input: {
   sessionId: string;
@@ -63,7 +90,7 @@ export async function persistAssessmentSession(input: {
     }),
   );
 
-  const score = recoveryScoreFromAsymmetry(input.asymmetry);
+  const score = recoveryScore(input.asymmetry, input.wearables);
   const date = new Date().toISOString().slice(0, 10);
   const recoveryDocId = `${input.userId}_${date}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 
@@ -75,13 +102,47 @@ export async function persistAssessmentSession(input: {
       ? [...(prev.sessionIds as string[]), input.sessionId]
       : [input.sessionId];
     await ref.set(
-      {
-        userId: input.userId,
-        date,
-        score,
-        sessionIds,
-      },
+      { userId: input.userId, date, score, sessionIds },
       { merge: true },
     );
   });
+
+  // ── Engagement: XP / streak / level ───────────────────────────────────────
+  // 50 XP per completed session. Level threshold: floor(xpTotal / 200) + 1.
+  // Streak counts consecutive calendar days; resets if gap > 1 day.
+  const XP_PER_SESSION = 50;
+  await withFirestoreRetry("engagement write", async () => {
+    const engRef = db.collection("engagement").doc(input.userId);
+    const engSnap = await engRef.get();
+    const eng = engSnap.data() as {
+      xpTotal?: number;
+      level?: number;
+      mobilityStreakDays?: number;
+      lastSessionDate?: string;
+    } | undefined;
+
+    const prevXp = typeof eng?.xpTotal === "number" ? eng.xpTotal : 0;
+    const newXp = prevXp + XP_PER_SESSION;
+    const newLevel = Math.floor(newXp / 200) + 1;
+
+    const lastDate = typeof eng?.lastSessionDate === "string" ? eng.lastSessionDate : null;
+    const prevStreak = typeof eng?.mobilityStreakDays === "number" ? eng.mobilityStreakDays : 0;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    let newStreak = 1; // default: first session or broken streak
+    if (lastDate === date) {
+      newStreak = prevStreak; // multiple sessions same day — keep streak
+    } else if (lastDate === yesterdayStr) {
+      newStreak = prevStreak + 1; // consecutive day — extend streak
+    }
+
+    await engRef.set(
+      { userId: input.userId, xpTotal: newXp, level: newLevel, mobilityStreakDays: newStreak, lastSessionDate: date },
+      { merge: true },
+    );
+    console.log(`[engagement] uid=${input.userId} xp=${newXp} level=${newLevel} streak=${newStreak}`);
+  });
 }
+

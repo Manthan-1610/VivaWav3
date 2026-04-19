@@ -4,6 +4,7 @@ import { validateGenerateBody } from "../services/validateGenerateBody.js";
 import { generateHardwareProtocolWithGemini } from "../services/geminiProtocol.js";
 import { synthesizeVoiceCoaching } from "../services/elevenLabsVoice.js";
 import { persistAssessmentSession } from "../services/firebaseSession.js";
+import { sendProtocolToDevice } from "../services/hydrawavDevice.js";
 
 export const generateProtocolRouter = Router();
 
@@ -36,7 +37,27 @@ async function handleGenerateProtocol(req: Request, res: Response) {
       metadata,
     });
 
-    const voice = await synthesizeVoiceCoaching(gemini.protocol);
+    // Build narration context from the real assessment data so the voice is personalized
+    const topZones: string[] = [];
+    const jointScores = (asymmetry.jointScores && typeof asymmetry.jointScores === "object" && !Array.isArray(asymmetry.jointScores))
+      ? asymmetry.jointScores as Record<string, number>
+      : {};
+    // Sort zones by asymmetry score descending, take top 2
+    const sorted = Object.entries(jointScores)
+      .filter(([, v]) => typeof v === "number")
+      .sort(([, a], [, b]) => (b as number) - (a as number));
+    for (const [k] of sorted.slice(0, 2)) topZones.push(k);
+
+    // Run voice synthesis + device dispatch in parallel for speed (both have independent timeouts)
+    const [voice, device] = await Promise.all([
+      synthesizeVoiceCoaching(gemini.protocol, {
+        topZones,
+        readiness: (asymmetry.readiness as "low" | "stable" | "high" | undefined) ?? undefined,
+        hrv: typeof wearables.hrv === "number" ? wearables.hrv : null,
+        strain: typeof wearables.strain === "number" ? wearables.strain : null,
+      }),
+      sendProtocolToDevice(gemini.protocol, sessionId),
+    ]);
 
     await persistAssessmentSession({
       sessionId,
@@ -62,6 +83,13 @@ async function handleGenerateProtocol(req: Request, res: Response) {
         url: voice.url,
         fallback: voice.fallback,
         durationSeconds: voice.durationSeconds,
+        script: voice.script,
+      },
+      deviceSession: {
+        live: device.live,
+        topic: device.topic,
+        status: device.status,
+        message: device.message,
       },
       sessionId,
       validation,

@@ -1,12 +1,19 @@
-import { Box, Paper, Stack, Typography } from "@mui/material";
+import { Box, Chip, Paper, Stack, Typography } from "@mui/material";
 import type { ClientSummary } from "../../types/vivawav3";
 
 type Props = {
   clients: ClientSummary[] | unknown;
 };
 
+function statusFromScore(score: number | null): "Ready" | "Recovering" | "Needs support" {
+  if (score === null) return "Needs support";
+  if (score >= 70) return "Ready";
+  if (score >= 50) return "Recovering";
+  return "Needs support";
+}
+
 export function ClientList({ clients }: Props) {
-  const safeClients = Array.isArray(clients) ? clients : [];
+  const safeClients = Array.isArray(clients) ? (clients as ClientSummary[]) : [];
 
   return (
     <Paper
@@ -19,54 +26,66 @@ export function ClientList({ clients }: Props) {
       }}
     >
       <Typography sx={{ color: "#f8fafc", fontWeight: 800, mb: 1.5 }}>
-        Client list
+        Client roster
       </Typography>
 
       {safeClients.length === 0 ? (
-        <Typography sx={{ color: "#cbd5e1" }}>
-          No client data yet.
+        <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+          No clients linked yet. Add client Firebase UIDs to your practitioner profile.
         </Typography>
       ) : (
         <Stack spacing={1.2}>
-          {safeClients.map((client) => (
-            <Box
-              key={client.name}
-              sx={{
-                p: 1.6,
-                borderRadius: 3,
-                backgroundColor: "rgba(0,0,0,0.4)",
-                border: "1px solid rgba(148, 163, 184, 0.12)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              <Box>
-                <Typography sx={{ color: "#f8fafc", fontWeight: 800 }}>
-                  {client.name}
-                </Typography>
-                <Typography sx={{ color: "#cbd5e1", fontSize: 12, mt: 0.4 }}>
-                  Score {client.score} · Streak {client.streakDays}d
-                </Typography>
-              </Box>
+          {safeClients.map((client) => {
+            const name = client.displayName ?? client.userId;
+            const score = client.lastRecoveryScore;
+            const status = statusFromScore(score);
 
-              <Typography
+            return (
+              <Box
+                key={client.userId}
                 sx={{
-                  fontWeight: 800,
-                  color:
-                    client.status === "Ready"
-                      ? "#c7d8c2"
-                      : client.status === "Recovering"
-                      ? "#f0c7a8"
-                      : "#f2d3b8",
-                  whiteSpace: "nowrap",
+                  p: 1.6,
+                  borderRadius: 3,
+                  backgroundColor: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(148, 163, 184, 0.12)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 2,
                 }}
               >
-                {client.status}
-              </Typography>
-            </Box>
-          ))}
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: "#f8fafc", fontWeight: 800 }}>
+                    {name}
+                  </Typography>
+                  <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.3 }}>
+                    Score {score ?? "—"} · Streak {client.mobilityStreakDays}d · Lv {client.level}
+                    {client.scoreDate ? ` · ${client.scoreDate}` : ""}
+                  </Typography>
+                </Box>
+
+                <Chip
+                  size="small"
+                  label={status}
+                  sx={{
+                    fontWeight: 700,
+                    bgcolor:
+                      status === "Ready"
+                        ? "rgba(168,187,163,0.25)"
+                        : status === "Recovering"
+                        ? "rgba(184,124,76,0.25)"
+                        : "rgba(239,68,68,0.15)",
+                    color:
+                      status === "Ready"
+                        ? "#A8BBA3"
+                        : status === "Recovering"
+                        ? "#B87C4C"
+                        : "#fca5a5",
+                  }}
+                />
+              </Box>
+            );
+          })}
         </Stack>
       )}
     </Paper>

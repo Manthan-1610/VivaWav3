@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useRef,
@@ -15,7 +15,6 @@ import type {
   GenerateProtocolResponse,
   HardwareProtocol,
 } from "../../types/vivawav3";
-import { mapHardwareProtocolToPreview } from "../../types/vivawav3";
 import { postGenerateProtocol } from "../../api/generateProtocol";
 import { useAuth } from "../../auth/useAuth";
 import { roundTripJson } from "../../lib/jsonRoundTrip";
@@ -57,6 +56,9 @@ export function AssessmentView() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraKey, setCameraKey] = useState(0);
+  const [cameraStarted, setCameraStarted] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSequenceStarting, setIsSequenceStarting] = useState(false);
   const [poseInitError, setPoseInitError] = useState<string | null>(null);
 
   const [landmarker, setLandmarker] = useState<PoseLandmarker | null>(null);
@@ -71,6 +73,8 @@ export function AssessmentView() {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [poseSamples, setPoseSamples] = useState<PoseJointSample[]>([]);
   const [processingRecording, setProcessingRecording] = useState(false);
+  // Zones immediately available after blob analysis (before API round-trip).
+  const [liveZones, setLiveZones] = useState<{ area: string; intensity: number }[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,8 @@ export function AssessmentView() {
     useState<GenerateProtocolResponse["voiceAudio"] | null>(null);
   const [validation, setValidation] =
     useState<GenerateProtocolResponse["validation"] | null>(null);
+  const [deviceSession, setDeviceSession] =
+    useState<GenerateProtocolResponse["deviceSession"] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +113,16 @@ export function AssessmentView() {
     };
   }, []);
 
+  // "Start recording" sequence: requests camera, and once stream is available,
+  // it triggers a 3-second countdown before actual recording starts.
+  const startRecordingSequence = useCallback(() => {
+    setIsSequenceStarting(true);
+    setCameraError(null);
+    setCameraStarted(true);
+  }, []);
+
   useEffect(() => {
+    if (!cameraStarted) return;
     let cancelled = false;
     setCameraError(null);
     (async () => {
@@ -133,13 +148,14 @@ export function AssessmentView() {
               : "Camera access was blocked or no camera was found. Allow access and retry.",
           );
           setStream(null);
+          setCameraStarted(false); // allow re-try on next click
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [cameraKey]);
+  }, [cameraStarted, cameraKey]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -204,7 +220,20 @@ export function AssessmentView() {
     mediaRecorderRef.current = null;
     setIsRecording(false);
     isRecordingRef.current = false;
-  }, []);
+
+    // Automatically close camera after recording stops
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    setStream(null);
+    setCameraStarted(false);
+  }, [stream]);
+
+  useEffect(() => {
+    if (stream && isSequenceStarting && countdown === null) {
+      setCountdown(3);
+    }
+  }, [stream, isSequenceStarting, countdown]);
 
   useEffect(() => {
     if (!isRecording) return;
@@ -254,15 +283,27 @@ export function AssessmentView() {
       setProcessingRecording(true);
       void estimateSamplesFromRecordedBlob(blob, pl)
         .then(({ samples, lastLandmarks: lm }) => {
+          const usedSamples = samples.length > 0 ? samples : poseSamples;
           if (samples.length > 0) {
             setPoseSamples(samples);
-            if (lm?.length) setLandmarksForExport(lm);
+          }
+          // ── Key fix: immediately surface the detected zones and landmark
+          // frame so the PoseOverlay populates right after the recording stops,
+          // not only after the API call finishes.
+          const agg = aggregatePoseSamples(usedSamples);
+          if (agg.poseFound) {
+            setLiveZones(agg.zones);
+            if (lm?.length) {
+              setLandmarksForExport(lm);
+              setLastLandmarks(lm); // keep skeleton visible on camera canvas too
+            }
           }
         })
         .catch(() => {
           /* keep live samples collected during recording */
         })
         .finally(() => setProcessingRecording(false));
+
     };
 
     mr.start(500);
@@ -271,12 +312,29 @@ export function AssessmentView() {
     isRecordingRef.current = true;
   }, [stream]);
 
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown > 0) {
+      const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+      return () => clearTimeout(id);
+    } else {
+      setCountdown(null);
+      setIsSequenceStarting(false);
+      startRecording();
+    }
+  }, [countdown, startRecording]);
+
   const onRetryCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
     }
     setStream(null);
+    setCameraStarted(false);
+    setIsSequenceStarting(false);
+    setCountdown(null);
     setCameraKey((k) => k + 1);
+    // Re-trigger after a tick so the state resets cleanly
+    setTimeout(() => setCameraStarted(true), 50);
   }, [stream]);
 
   const runAssessment = async () => {
@@ -314,10 +372,15 @@ export function AssessmentView() {
       })),
       recommendedPlacement: aggregated.recommendedPlacement,
       state: {
-        hrv: 45,
-        strain: Math.round(
-          40 + (aggregated.zones[0]?.intensity ?? 0) * 40,
-        ),
+        // Derive a realistic mock HRV from pose-based readiness so Gemini gets a coherent signal.
+        // Low readiness (high asymmetry) → low HRV (28–42). High → high HRV (62–80). Stable → mid.
+        hrv:
+          aggregated.readiness === "low"
+            ? Math.round(28 + Math.random() * 14)   // 28–42
+            : aggregated.readiness === "high"
+            ? Math.round(62 + Math.random() * 18)   // 62–80
+            : Math.round(42 + Math.random() * 18),  // 42–60
+        strain: Math.round(40 + (aggregated.zones[0]?.intensity ?? 0) * 40),
         readiness: aggregated.readiness,
       },
     };
@@ -359,10 +422,13 @@ export function AssessmentView() {
 
       const res = await postGenerateProtocol(payload);
 
-      setProtocol(mapHardwareProtocolToPreview(res.hardwareProtocol));
+      setProtocol(res.hardwareProtocol);
       setSessionId(res.sessionId);
       setVoiceAudio(res.voiceAudio ?? null);
       setValidation(res.validation ?? null);
+      setDeviceSession(res.deviceSession ?? null);
+      // Confirmed snapshot zones supersede live preview
+      setLiveZones([]);
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Something went wrong while sending your assessment.";
@@ -377,7 +443,6 @@ export function AssessmentView() {
   };
 
   const canSubmit =
-    Boolean(stream) &&
     !cameraError &&
     recordingSeconds >= MIN_RECORDING_SECONDS &&
     Boolean(recordedBlob) &&
@@ -435,16 +500,23 @@ export function AssessmentView() {
         videoRef={videoRef}
         stream={stream}
         cameraError={cameraError}
+        cameraStarted={cameraStarted}
+        countdown={countdown}
         onRetryCamera={onRetryCamera}
         isRecording={isRecording}
         recordingSeconds={recordingSeconds}
         maxSeconds={MAX_RECORDING_SECONDS}
         landmarks={lastLandmarks}
-        onStartRecording={startRecording}
+        onStartRecordingSequence={startRecordingSequence}
         onStopRecording={stopRecording}
       />
 
-      <PoseOverlay zones={snapshot?.zones ?? []} poseDetected={Boolean(lastLandmarks?.length)} />
+      <PoseOverlay
+        zones={snapshot?.zones?.length ? snapshot.zones : liveZones}
+        landmarks={landmarksForExport ?? lastLandmarks}
+        poseDetected={Boolean(lastLandmarks?.length)}
+        analysisComplete={Boolean(snapshot?.zones?.length || liveZones.length)}
+      />
 
       <AsymmetryResults
         snapshot={snapshot}
@@ -452,6 +524,7 @@ export function AssessmentView() {
         sessionId={sessionId}
         voiceAudio={voiceAudio}
         validation={validation}
+        deviceSession={deviceSession}
       />
 
       <SubmitAssessment
