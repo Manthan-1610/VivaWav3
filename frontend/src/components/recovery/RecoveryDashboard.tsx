@@ -1,4 +1,4 @@
-import { Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { ScoreCard } from "./ScoreCard";
 import { StreakTracker } from "./StreakTracker";
 import { XpLevelDisplay } from "./XpLevelDisplay";

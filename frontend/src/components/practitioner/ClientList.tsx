@@ -5,11 +5,11 @@ type Props = {
   clients: ClientSummary[] | unknown;
 };
 
-function statusFromScore(score: number | null): "Ready" | "Recovering" | "Needs support" {
-  if (score === null) return "Needs support";
+function statusFromScore(score: number | null): "Ready" | "Recovering" | "Needs Attention" {
+  if (score === null) return "Needs Attention";
   if (score >= 70) return "Ready";
   if (score >= 50) return "Recovering";
-  return "Needs support";
+  return "Needs Attention";
 }
 
 export function ClientList({ clients }: Props) {
@@ -31,14 +31,14 @@ export function ClientList({ clients }: Props) {
 
       {safeClients.length === 0 ? (
         <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
-          No clients linked yet. Add client Firebase UIDs to your practitioner profile.
+          No client sessions yet.
         </Typography>
       ) : (
         <Stack spacing={1.2}>
           {safeClients.map((client) => {
             const name = client.displayName ?? client.userId;
             const score = client.lastRecoveryScore;
-            const status = statusFromScore(score);
+            const status = client.status ?? statusFromScore(score);
 
             return (
               <Box
@@ -73,14 +73,14 @@ export function ClientList({ clients }: Props) {
                       status === "Ready"
                         ? "rgba(168,187,163,0.25)"
                         : status === "Recovering"
-                        ? "rgba(184,124,76,0.25)"
-                        : "rgba(239,68,68,0.15)",
+                          ? "rgba(184,124,76,0.25)"
+                          : "rgba(239,68,68,0.15)",
                     color:
                       status === "Ready"
                         ? "#A8BBA3"
                         : status === "Recovering"
-                        ? "#B87C4C"
-                        : "#fca5a5",
+                          ? "#B87C4C"
+                          : "#fca5a5",
                   }}
                 />
               </Box>

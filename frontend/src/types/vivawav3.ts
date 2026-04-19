@@ -17,8 +17,6 @@ export type BodySnapshot = {
   };
 };
 
-// ─── Hardware Protocol (matches server hardware-protocol.schema.json) ──────────
-
 export type HardwareProtocolSequenceStep = {
   order: number;
   modality: "thermal" | "photobiomodulation" | "vibro_acoustic" | "combined";
@@ -35,7 +33,6 @@ export type HardwareProtocolPad = {
   lightIntensity?: number;
 };
 
-/** Full Hardware_Protocol as returned by the backend (matches schema v1.0.0). */
 export type HardwareProtocol = {
   schemaVersion: string;
   sessionDurationMinutes: number;
@@ -46,8 +43,6 @@ export type HardwareProtocol = {
   dailyHabit?: string;
 };
 
-// ─── API response types ───────────────────────────────────────────────────────
-
 export type GenerateProtocolResponse = {
   hardwareProtocol: HardwareProtocol;
   sessionId: string;
@@ -57,7 +52,6 @@ export type GenerateProtocolResponse = {
     script?: string;
     fallback?: boolean;
   };
-  /** Hydrawav3 device dispatch result — live when API credentials are configured */
   deviceSession?: {
     live: boolean;
     topic: string;
@@ -78,7 +72,6 @@ export type RecoveryEntry = {
   sessionIds: string[];
 };
 
-/** Richer per-day state for the gamified client dashboard. */
 export type RecoveryState = {
   score: number;
   dateLabel: string;
@@ -92,21 +85,52 @@ export type RecoveryState = {
   dailyHabit?: string;
 };
 
-export type RecoveryListResponse = {
-  userId: string;
-  entries: RecoveryEntry[];
-};
+export type SessionStatus = "Ready" | "Recovering" | "New" | "Needs Attention";
 
 export type ClientSummary = {
   userId: string;
   displayName: string;
+  clientEmail?: string | null;
   lastRecoveryScore: number | null;
   scoreDate: string | null;
   mobilityStreakDays: number;
   level: number;
+  status: SessionStatus;
+  lastSessionAt?: string | null;
+  lastCheckInAt?: string | null;
+};
+
+export type SavedAssessmentSession = {
+  sessionId: string;
+  practitionerId: string;
+  clientId: string;
+  clientEmail: string;
+  displayName: string;
+  recoveryScore: number;
+  scoreDate: string;
+  mobilityStreakDays: number;
+  level: number;
+  status: SessionStatus;
+  bodySnapshot: BodySnapshot;
+  protocol: HardwareProtocol;
+  voiceAudio?: GenerateProtocolResponse["voiceAudio"] | null;
+  validation?: GenerateProtocolResponse["validation"] | null;
+  deviceSession?: GenerateProtocolResponse["deviceSession"] | null;
+  createdAt: string;
 };
 
 export type ClientsListResponse = {
   practitionerId: string;
   clients: ClientSummary[];
+};
+
+export type SessionsResponse = {
+  practitionerId?: string;
+  clientId?: string;
+  sessions: SavedAssessmentSession[];
+};
+
+export type RecoveryListResponse = {
+  userId: string;
+  entries: RecoveryEntry[];
 };

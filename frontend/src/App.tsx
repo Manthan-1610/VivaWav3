@@ -1,15 +1,6 @@
 import { Box, CircularProgress } from "@mui/material";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { AssessmentErrorBoundary } from "./components/assessment/AssessmentErrorBoundary";
 import { AssessmentView } from "./components/assessment/AssessmentView";
 import { PractitionerDashboard } from "./components/practitioner/PractitionerDashboard";
@@ -21,24 +12,55 @@ import { useAuth } from "./auth/useAuth";
 import { AppShell } from "./layout/AppShell";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { db } from "./lib/firebase";
-import { getRecovery } from "./api/recovery";
-import type { ClientSummary, RecoveryState, RecoveryEntry } from "./types/vivawav3";
+import { getSessions } from "./api/sessions";
+import type {
+  ClientSummary,
+  RecoveryEntry,
+  RecoveryState,
+  SavedAssessmentSession,
+} from "./types/vivawav3";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+function sessionsToClients(sessions: SavedAssessmentSession[]): ClientSummary[] {
+  const latestByClient = new Map<string, SavedAssessmentSession>();
 
-/**
- * Converts a `RecoveryEntry[]` (from the server) into the `RecoveryState`
- * shape the gamified client dashboard expects.
- * Streak, XP, and level are derived from entry history until the backend
- * engagement collection is directly read.
- */
-function entriesToRecoveryState(entries: RecoveryEntry[]): RecoveryState | null {
+  for (const session of [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+    if (!latestByClient.has(session.clientId)) {
+      latestByClient.set(session.clientId, session);
+    }
+  }
+
+  return Array.from(latestByClient.values()).map((session) => ({
+    userId: session.clientId,
+    displayName: session.displayName,
+    lastRecoveryScore: session.recoveryScore,
+    scoreDate: session.scoreDate,
+    mobilityStreakDays: session.mobilityStreakDays,
+    level: session.level,
+    status: session.status,
+    lastSessionAt: session.createdAt,
+    lastCheckInAt: session.createdAt,
+  }));
+}
+
+function sessionsToRecoveryEntries(sessions: SavedAssessmentSession[]): RecoveryEntry[] {
+  return [...sessions]
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((s) => ({
+      date: s.scoreDate,
+      score: s.recoveryScore,
+      sessionIds: [s.sessionId],
+    }));
+}
+
+function entriesToRecoveryState(
+  entries: RecoveryEntry[],
+  latestHabit?: string,
+): RecoveryState | null {
   if (!entries.length) return null;
+
   const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
   const latest = sorted[0];
 
-  // Streak: count consecutive calendar days counting backward from today
   const now = new Date();
   let streakDays = 0;
   for (let i = 0; i < sorted.length; i++) {
@@ -64,107 +86,43 @@ function entriesToRecoveryState(entries: RecoveryEntry[]): RecoveryState | null 
     before: `Score ${prevScore}`,
     after: `Score ${latest.score}`,
     trendPoints,
+    dailyHabit: latestHabit,
   };
 }
-
-const DEMO_CLIENTS: ClientSummary[] = [
-  { userId: "demo-1", displayName: "Maria Calix", lastRecoveryScore: 81, scoreDate: new Date().toISOString().slice(0, 10), mobilityStreakDays: 7, level: 3 },
-  { userId: "demo-2", displayName: "James Tran", lastRecoveryScore: 64, scoreDate: new Date().toISOString().slice(0, 10), mobilityStreakDays: 2, level: 1 },
-  { userId: "demo-3", displayName: "Sofia Park", lastRecoveryScore: 72, scoreDate: new Date().toISOString().slice(0, 10), mobilityStreakDays: 5, level: 2 },
-];
-const DEMO_TREND = [60, 65, 70, 68, 72, 74, 78];
-
-// ─── Practitioner page — real-time Firestore onSnapshot ───────────────────────
 
 function PractitionerDashboardPage() {
   const { user } = useAuth();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [trendPoints, setTrendPoints] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  // Track whether we are using live data so the RealTimeIndicator is accurate
-  const liveRef = useRef(false);
 
   useEffect(() => {
     if (!user?.uid) return;
 
-    // ── Step 1: listen to the practitioner's user doc for their clientIds list
-    const unsubUser = onSnapshot(
-      doc(db, "users", user.uid),
-      (snap) => {
-        const data = snap.data() as { clientIds?: string[] } | undefined;
-        const clientIds: string[] = Array.isArray(data?.clientIds) ? data.clientIds : [];
+    let cancelled = false;
+    setLoading(true);
 
-        if (clientIds.length === 0) {
-          // No clients linked yet — use demo seed so dashboard looks populated
-          setClients(DEMO_CLIENTS);
-          setTrendPoints(DEMO_TREND);
-          setLoading(false);
-          liveRef.current = false;
-          return;
-        }
+    getSessions({ practitionerId: user.uid })
+      .then((res) => {
+        if (cancelled) return;
 
-        // ── Step 2: for each clientId, listen to their latest recoveryScore doc
-        // Firestore `in` supports up to 30 items; chunk if needed
-        const chunkSize = 30;
-        const chunks: string[][] = [];
-        for (let i = 0; i < clientIds.length; i += chunkSize) {
-          chunks.push(clientIds.slice(i, i + chunkSize));
-        }
+        const sessions = res.sessions ?? [];
+        setClients(sessionsToClients(sessions));
+        setTrendPoints(sessions.slice(0, 7).map((s) => s.recoveryScore));
+      })
+      .catch((err) => {
+        console.warn("[PractitionerDashboard] load error:", err);
+        if (cancelled) return;
+        setClients([]);
+        setTrendPoints([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-        const clientMap = new Map<string, ClientSummary>();
-
-        const unsubscribers = chunks.map((chunk) => {
-          const q = query(
-            collection(db, "recoveryScores"),
-            where("userId", "in", chunk),
-            orderBy("date", "desc"),
-            limit(chunk.length * 5), // allow a few entries per client
-          );
-
-          return onSnapshot(q, (qs) => {
-            // Build the latest score per client
-            qs.forEach((d) => {
-              const rec = d.data() as { userId: string; date: string; score: number };
-              const existing = clientMap.get(rec.userId);
-              if (!existing || rec.date > (existing.scoreDate ?? "")) {
-                clientMap.set(rec.userId, {
-                  userId: rec.userId,
-                  displayName: rec.userId, // will be enriched below
-                  lastRecoveryScore: rec.score,
-                  scoreDate: rec.date,
-                  mobilityStreakDays: 0,
-                  level: 1,
-                });
-              }
-            });
-
-            // Merge engagement data (XP/streak/level)
-            const enrichedClients = Array.from(clientMap.values());
-            setClients(enrichedClients.length > 0 ? enrichedClients : DEMO_CLIENTS);
-            setTrendPoints(
-              enrichedClients
-                .map((c) => c.lastRecoveryScore ?? 0)
-                .filter(Boolean)
-                .slice(0, 7),
-            );
-            setLoading(false);
-            liveRef.current = true;
-          });
-        });
-
-        return () => unsubscribers.forEach((u) => u());
-      },
-      (err) => {
-        // Firestore permission error or network failure — fall back to demo
-        console.warn("[PractitionerDashboard] onSnapshot error:", err.message);
-        setClients(DEMO_CLIENTS);
-        setTrendPoints(DEMO_TREND);
-        setLoading(false);
-        liveRef.current = false;
-      },
-    );
-
-    return () => unsubUser();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
   return (
@@ -178,8 +136,6 @@ function PractitionerDashboardPage() {
   );
 }
 
-// ─── Recovery page — REST fetch + engagement listener ────────────────────────
-
 function RecoveryDashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<RecoveryState | null>(null);
@@ -187,59 +143,34 @@ function RecoveryDashboardPage() {
 
   useEffect(() => {
     if (!user?.uid) return;
+
     let cancelled = false;
+    setLoading(true);
 
-    // Fetch recovery entries from server
-    getRecovery(user.uid)
+    getSessions({ clientId: user.uid })
       .then((res) => {
-        if (!cancelled) setData(entriesToRecoveryState(res.entries));
-      })
-      .catch(() => {
-        // Seed with demo data so dashboard looks populated before first session
-        if (!cancelled)
-          setData({
-            score: 76,
-            dateLabel: new Date().toISOString().slice(0, 10),
-            streakDays: 4,
-            xp: 200,
-            level: 2,
-            nextLevelXp: 400,
-            before: "Score 62",
-            after: "Score 76",
-            trendPoints: [55, 62, 68, 64, 70, 74, 76],
-            dailyHabit: "Perform 5 slow, deep body-weight squats each morning to maintain hip and lower back mobility."
-          });
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+        if (cancelled) return;
 
-    // Real-time engagement listener — updates XP/streak/level immediately after a session
-    const unsubEng = onSnapshot(
-      doc(db, "engagement", user.uid),
-      (snap) => {
-        const eng = snap.data() as {
-          xpTotal?: number;
-          level?: number;
-          mobilityStreakDays?: number;
-        } | undefined;
-        if (!eng) return;
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                xp: eng.xpTotal ?? prev.xp,
-                level: eng.level ?? prev.level,
-                nextLevelXp: (eng.level ?? prev.level) * 200,
-                streakDays: eng.mobilityStreakDays ?? prev.streakDays,
-              }
-            : prev,
-        );
-      },
-      (err) => console.warn("[RecoveryDashboard] engagement listener:", err.message),
-    );
+        const sessions = res.sessions ?? [];
+        const latest = [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        const latestHabit =
+          latest && typeof (latest.protocol as { dailyHabit?: unknown } | undefined)?.dailyHabit === "string"
+            ? String((latest.protocol as { dailyHabit?: string }).dailyHabit)
+            : undefined;
+
+        setData(entriesToRecoveryState(sessionsToRecoveryEntries(sessions), latestHabit));
+      })
+      .catch((err) => {
+        console.warn("[RecoveryDashboard] load error:", err);
+        if (cancelled) return;
+        setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
-      unsubEng();
     };
   }, [user?.uid]);
 
@@ -250,16 +181,12 @@ function RecoveryDashboardPage() {
   );
 }
 
-// ─── Root redirect ────────────────────────────────────────────────────────────
-
 function RootRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === "practitioner") return <Navigate to="/dashboard" replace />;
   return <Navigate to="/recovery" replace />;
 }
-
-// ─── App ──────────────────────────────────────────────────────────────────────
 
 export function App() {
   const { loading } = useAuth();
