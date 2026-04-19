@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type AssessmentDraft = {
   clientId?: string;
@@ -42,20 +42,25 @@ export function AssessmentDraftProvider({
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
   }, [draft]);
 
+  const updateDraft = useCallback((patch: Partial<AssessmentDraft>) => {
+    setDraft((prev) => ({
+      ...prev,
+      ...patch,
+    }));
+  }, []);
+
+  const resetDraft = useCallback(() => {
+    setDraft({});
+    sessionStorage.removeItem(STORAGE_KEY);
+  }, []);
+
   const value = useMemo<AssessmentDraftContextValue>(
     () => ({
       draft,
-      updateDraft: (patch) =>
-        setDraft((prev) => ({
-          ...prev,
-          ...patch,
-        })),
-      resetDraft: () => {
-        setDraft({});
-        sessionStorage.removeItem(STORAGE_KEY);
-      },
+      updateDraft,
+      resetDraft,
     }),
-    [draft]
+    [draft, updateDraft, resetDraft]
   );
 
   return (
