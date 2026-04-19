@@ -1,102 +1,78 @@
-import { useEffect, useState } from "react";
-import { Box, Container, Typography, CssBaseline } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AssessmentErrorBoundary } from "./components/assessment/AssessmentErrorBoundary";
 import { AssessmentView } from "./components/assessment/AssessmentView";
-import { RecoveryDashboard } from "./components/recovery/RecoveryDashboard";
 import { PractitionerDashboard } from "./components/practitioner/PractitionerDashboard";
-import type { ClientSummary, RecoveryState } from "./types/vivawav3";
+import { RecoveryDashboard } from "./components/recovery/RecoveryDashboard";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { useAuth } from "./auth/useAuth";
+import { AppShell } from "./layout/AppShell";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+
+function RootRedirect() {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "practitioner") return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/recovery" replace />;
+}
 
 export function App() {
-  const [recoveryData, setRecoveryData] = useState<RecoveryState | null>(null);
-  const [clients, setClients] = useState<ClientSummary[]>([]);
-  const [isRecoveryLoading, setIsRecoveryLoading] = useState(true);
-  const [isPractitionerLoading, setIsPractitionerLoading] = useState(true);
+  const { loading } = useAuth();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsRecoveryLoading(true);
-        setIsPractitionerLoading(true);
-
-        const [recoveryRes, clientsRes] = await Promise.all([
-          fetch("/api/recovery/current"),
-          fetch("/api/clients"),
-        ]);
-
-        if (recoveryRes.ok) {
-          const recoveryJson = (await recoveryRes.json()) as RecoveryState;
-          setRecoveryData(recoveryJson);
-        } else {
-          setRecoveryData(null);
-        }
-
-        if (clientsRes.ok) {
-          const clientsJson = (await clientsRes.json()) as ClientSummary[];
-          setClients(clientsJson);
-        } else {
-          setClients([]);
-        }
-      } catch (error) {
-        console.error("Failed to load backend data:", error);
-        setRecoveryData(null);
-        setClients([]);
-      } finally {
-        setIsRecoveryLoading(false);
-        setIsPractitionerLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <>
-      <CssBaseline />
-      <Box sx={{ minHeight: "100vh", py: 3, bgcolor: "#0b1220" }}>
-        <Container maxWidth="xl">
-          <Typography
-            sx={{ color: "#f8fafc", fontSize: 32, fontWeight: 900, mb: 2 }}
-          >
-            ViVaWav3
-          </Typography>
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              flexWrap: "wrap",
-              alignItems: "stretch",
-            }}
-          >
-            <Box sx={{ flex: "1 1 320px" }}>
-              <Typography sx={{ color: "#A8BBA3", mb: 1, fontWeight: 700 }}>
-                Assessment
-              </Typography>
-              <AssessmentView />
-            </Box>
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/assessment"
+          element={
+            <ProtectedRoute roles={["practitioner"]}>
+              <AssessmentErrorBoundary>
+                <AssessmentView />
+              </AssessmentErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
 
-            <Box sx={{ flex: "1 1 320px" }}>
-              <Typography sx={{ color: "#A8BBA3", mb: 1, fontWeight: 700 }}>
-                Recovery
-              </Typography>
-              <RecoveryDashboard
-                data={recoveryData}
-                isLoading={isRecoveryLoading}
-              />
-            </Box>
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute roles={["practitioner"]}>
+              <PractitionerDashboard clients={[]} trendPoints={[]} />
+            </ProtectedRoute>
+          }
+        />
 
-            <Box sx={{ flex: "1 1 320px" }}>
-              <Typography sx={{ color: "#A8BBA3", mb: 1, fontWeight: 700 }}>
-                Practitioner
-              </Typography>
-              <PractitionerDashboard
-                clients={clients}
-                trendPoints={recoveryData?.trendPoints ?? []}
-                isLoading={isPractitionerLoading}
-              />
-            </Box>
-          </Box>
-        </Container>
-      </Box>
-    </>
+        <Route
+          path="/recovery"
+          element={
+            <ProtectedRoute roles={["client"]}>
+              <RecoveryDashboard data={null} />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

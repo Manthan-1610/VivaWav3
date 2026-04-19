@@ -5,8 +5,8 @@ import { ClientTrendChart } from "./ClientTrendChart";
 import type { ClientSummary } from "../../types/vivawav3";
 
 type Props = {
-  clients: ClientSummary[];
-  trendPoints: number[];
+  clients: ClientSummary[] | unknown;
+  trendPoints: number[] | unknown;
   isLoading?: boolean;
 };
 
@@ -23,6 +23,8 @@ export function PractitionerDashboard({
     );
   }
 
+  const safeTrendPoints = Array.isArray(trendPoints) ? trendPoints : [];
+
   return (
     <Stack spacing={2}>
       <Typography sx={{ color: "#cbd5e1", fontSize: 13 }}>
@@ -30,10 +32,8 @@ export function PractitionerDashboard({
       </Typography>
 
       <RealTimeIndicator connected />
-
       <ClientList clients={clients} />
-
-      <ClientTrendChart points={trendPoints} />
+      <ClientTrendChart points={safeTrendPoints} />
     </Stack>
   );
 }
